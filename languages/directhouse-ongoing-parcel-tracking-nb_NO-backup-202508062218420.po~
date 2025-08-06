@@ -1,0 +1,263 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Ongoing Shipment Tracking\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-06 17:47+0000\n"
+"PO-Revision-Date: 2025-08-06 18:18+0000\n"
+"Last-Translator: \n"
+"Language-Team: Norsk bokmål\n"
+"Language: nb_NO\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"X-Loco-Version: 2.8.0; wp-6.8.2; php-7.4.33\n"
+"X-Domain: ongoing-shipment-tracking"
+
+#: includes/class-shipment-tracking-api.php:138
+msgid "A text message notification has been delivered to the recipient."
+msgstr "En tekstmelding har blitt levert til mottakeren."
+
+#: includes/class-shipment-tracking-admin.php:80
+msgid "All Tracking Events"
+msgstr "Alle sporingshendelser"
+
+#: includes/class-shipment-tracking-admin.php:92
+#: includes/class-shipment-tracking-admin.php:178
+#: includes/class-shipment-tracking-frontend.php:98
+#: includes/class-shipment-tracking-frontend.php:309
+msgid "Available for pickup"
+msgstr "Tilgjengelig for henting"
+
+#: includes/class-shipment-tracking-admin.php:94
+#: includes/class-shipment-tracking-admin.php:180
+#: includes/class-shipment-tracking-frontend.php:100
+#: includes/class-shipment-tracking-frontend.php:311
+msgid "Being picked"
+msgstr "Blir plukket"
+
+#: includes/class-shipment-tracking-frontend.php:94
+msgid "Current Status"
+msgstr "Nåværende status"
+
+#: includes/class-shipment-tracking-admin.php:91
+#: includes/class-shipment-tracking-admin.php:177
+#: includes/class-shipment-tracking-frontend.php:97
+#: includes/class-shipment-tracking-frontend.php:308
+msgid "Delivered"
+msgstr "Levert"
+
+#: includes/class-shipment-tracking-admin.php:65
+msgid "Enter the tracking number from the warehouse system."
+msgstr "Skriv inn sporingsnummeret fra lagersystemet."
+
+#: includes/class-shipment-tracking-frontend.php:220
+msgid "Error updating tracking information."
+msgstr "Feil ved oppdatering av sporingsinformasjon."
+
+#: includes/class-shipment-tracking-admin.php:224
+msgid "Error updating tracking."
+msgstr "Feil ved oppdatering av sporing."
+
+#: includes/class-shipment-tracking-cron.php:40
+msgid "Every Hour"
+msgstr "Hver time"
+
+#. URI of the plugin
+msgid "https://www.comfyballs.no"
+msgstr "https://www.comfyballs.no"
+
+#: includes/class-shipment-tracking-admin.php:93
+#: includes/class-shipment-tracking-admin.php:179
+#: includes/class-shipment-tracking-frontend.php:99
+#: includes/class-shipment-tracking-frontend.php:310
+msgid "In transit"
+msgstr "Under transport"
+
+#: includes/class-shipment-tracking-admin.php:54
+msgid "Invalid order."
+msgstr "Ugyldig bestilling."
+
+#: includes/class-shipment-tracking-admin.php:74
+#: includes/class-shipment-tracking-frontend.php:75
+msgid "Last updated:"
+msgstr "Sist oppdatert:"
+
+#: includes/class-shipment-tracking-admin.php:190
+#: includes/class-shipment-tracking-frontend.php:321
+msgid "No data"
+msgstr "Ingen data"
+
+#: includes/class-shipment-tracking-api.php:146
+msgid ""
+"No further tracking information is available. If the transporter has a "
+"separate app, you may be notified there, or via SMS or email when the parcel "
+"is delivered."
+msgstr ""
+"Ingen ytterligere sporingsinformasjon er tilgjengelig. Hvis transportøren "
+"har en egen app, kan du bli varslet der, eller via SMS eller e-post når "
+"pakken er levert."
+
+#: includes/class-shipment-tracking-admin.php:168
+#: includes/class-shipment-tracking-frontend.php:302
+msgid "No tracking"
+msgstr "Ingen sporing"
+
+#: includes/class-shipment-tracking-frontend.php:69
+msgid "No tracking information available yet. Please check back later."
+msgstr ""
+"Ingen sporingsinformasjon tilgjengelig ennå. Vennligst sjekk tilbake senere."
+
+#: includes/class-shipment-tracking-admin.php:119
+msgid "No tracking information available."
+msgstr "Ingen sporingsinformasjon tilgjengelig."
+
+#. Name of the plugin
+msgid "Ongoing Shipment Tracking"
+msgstr "Ongoing ordre og pakkesporing"
+
+#: ongoing-shipment-tracking.php:30
+msgid ""
+"Ongoing Shipment Tracking requires WooCommerce to be installed and activated."
+msgstr ""
+"Ongoing Ordre og Pakkesporing krever at WooCommerce er installert og "
+"aktivert."
+
+#: includes/class-shipment-tracking-cron.php:127
+msgid "Order delivered according to tracking information."
+msgstr "Bestilling levert i henhold til sporingsinformasjon."
+
+#: includes/class-shipment-tracking-api.php:135
+msgid ""
+"Order has been picked and is ready for further processing in the warehouse"
+msgstr ""
+"Bestillingen har blitt plukket og er klar for videre behandling på lageret."
+
+#: includes/class-shipment-tracking-api.php:134
+msgid "Order has been placed in the warehouse and will be prepared for picking"
+msgstr ""
+"Bestillingen har blitt plassert på lageret og vil bli klargjort for plukking."
+
+#: includes/class-shipment-tracking-admin.php:95
+#: includes/class-shipment-tracking-admin.php:181
+msgid "Other"
+msgstr "Annet"
+
+#: includes/class-shipment-tracking-frontend.php:101
+#: includes/class-shipment-tracking-frontend.php:312
+msgid "Processing"
+msgstr "Behandler"
+
+#: includes/class-shipment-tracking-frontend.php:115
+msgid "Refresh tracking information"
+msgstr "Oppdater sporingsinformasjon"
+
+#: includes/class-shipment-tracking-frontend.php:285
+msgid "Shipment Status"
+msgstr "Ordre og pakkesporing"
+
+#: includes/class-shipment-tracking-admin.php:37
+#: includes/class-shipment-tracking-frontend.php:57
+msgid "Shipment Tracking"
+msgstr "Ordre og Pakkesporing"
+
+#: includes/class-shipment-tracking-api.php:142
+msgid "The delivery of the shipment item is in progress."
+msgstr "Leveringen av pakken er i gang."
+
+#: includes/class-shipment-tracking-api.php:141
+msgid "The shipment item has arrived at the distribution terminal."
+msgstr "Pakken har ankommet distribusjonsterminalen."
+
+#: includes/class-shipment-tracking-api.php:140
+msgid "The shipment item has been delivered to a service point."
+msgstr "Pakken har blitt levert til et servicested."
+
+#: includes/class-shipment-tracking-api.php:144
+msgid "The shipment item has been delivered to the recipient's mailbox."
+msgstr "Pakken har blitt levert til mottakerens postkasse."
+
+#: includes/class-shipment-tracking-api.php:143
+msgid "The shipment item has been delivered."
+msgstr "Pakken har blitt levert."
+
+#: includes/class-shipment-tracking-api.php:139
+msgid "The shipment item has been loaded."
+msgstr "Pakken har blitt lastet."
+
+#: includes/class-shipment-tracking-api.php:145
+msgid "The shipment item has been routed to a service point."
+msgstr "Pakken har blitt rutet til et servicested."
+
+#: includes/class-shipment-tracking-api.php:137
+msgid "The shipment item is under transportation."
+msgstr "Pakken er under transport."
+
+#. Author of the plugin
+msgid "Thomas Audunhus"
+msgstr "Thomas Audunhus"
+
+#. Description of the plugin
+msgid "Track shipments using the DirectHouse warehouse API."
+msgstr "Spor sendinger ved hjelp av DirectHouse lager-API."
+
+#: includes/class-shipment-tracking-admin.php:140
+msgid "Tracking"
+msgstr "Sporing"
+
+#: includes/class-shipment-tracking-frontend.php:60
+msgid "Tracking information is not yet available for this order."
+msgstr "Sporingsinformasjon er ikke tilgjengelig for denne bestillingen ennå."
+
+#: includes/class-shipment-tracking-frontend.php:219
+msgid "Tracking information updated!"
+msgstr "Sporingsinformasjon oppdatert!"
+
+#: includes/class-shipment-tracking-admin.php:63
+msgid "Tracking Number:"
+msgstr "Sporingsnummer:"
+
+#: includes/class-shipment-tracking-frontend.php:134
+msgid "Tracking Timeline"
+msgstr "Tidslinje"
+
+#: includes/class-shipment-tracking-cron.php:157
+msgid "Tracking update completed"
+msgstr "Sporingsoppdatering fullført"
+
+#: includes/class-shipment-tracking-admin.php:223
+msgid "Tracking updated successfully!"
+msgstr "Sporing oppdatert vellykket!"
+
+#: includes/class-shipment-tracking-admin.php:96
+#: includes/class-shipment-tracking-admin.php:182
+#: includes/class-shipment-tracking-frontend.php:102
+#: includes/class-shipment-tracking-frontend.php:313
+msgid "Unknown"
+msgstr "Ukjent"
+
+#: includes/class-shipment-tracking-admin.php:69
+msgid "Update Tracking"
+msgstr "Oppdater sporing"
+
+#: includes/class-shipment-tracking-frontend.php:218
+msgid "Updating tracking information..."
+msgstr "Oppdaterer sporingsinformasjon..."
+
+#: includes/class-shipment-tracking-admin.php:222
+msgid "Updating..."
+msgstr "Oppdaterer..."
+
+#: includes/class-shipment-tracking-api.php:162
+msgid ""
+"We're currently having problems retrieving the order information associated "
+"with the tracking number."
+msgstr ""
+"Vi har for øyeblikket problemer med å hente bestillingsinformasjonen knyttet "
+"til sporingsnummeret."
+
+#: includes/class-shipment-tracking-api.php:136
+msgid ""
+"Your order has left the warehouse and is being transported to the terminal"
+msgstr "Pakken din har forlatt lageret og blir transportert til terminalen."

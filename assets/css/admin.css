@@ -1,0 +1,347 @@
+/**
+ * Admin CSS for Ongoing Shipment Tracking
+ */
+
+/* Meta box styling */
+#ongoing_shipment_tracking {
+    background: #fff;
+}
+
+#ongoing_shipment_tracking .tracking-info {
+    margin-top: 1em;
+    padding: 1em;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+#ongoing_shipment_tracking .tracking-info h4 {
+    margin-top: 0;
+    margin-bottom: 1em;
+    color: #333;
+}
+
+#ongoing_shipment_tracking .tracking-event {
+    margin-bottom: 1em;
+    padding-bottom: 1em;
+    border-bottom: 1px solid #eee;
+}
+
+#ongoing_shipment_tracking .tracking-event:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+
+#ongoing_shipment_tracking .event-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.5em;
+}
+
+#ongoing_shipment_tracking .event-status {
+	display: inline-block;
+	padding: 0.2em 0.5em;
+	border-radius: 3px;
+	font-size: 0.8em;
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+#ongoing_shipment_tracking .admin-status-delivered {
+	background: #46b450;
+	color: white;
+}
+
+#ongoing_shipment_tracking .admin-status-available_for_delivery {
+	background: #ffb900;
+	color: #333;
+}
+
+#ongoing_shipment_tracking .admin-status-en_route {
+	background: #0073aa;
+	color: white;
+}
+
+#ongoing_shipment_tracking .admin-status-waiting_to_be_picked {
+	background: #ffc107;
+	color: #333;
+}
+
+#ongoing_shipment_tracking .admin-status-picking {
+	background: #ff6b35;
+	color: white;
+}
+
+#ongoing_shipment_tracking .admin-status-other {
+	background: #666;
+	color: white;
+}
+
+#ongoing_shipment_tracking .admin-status-unknown {
+	background: #ccc;
+	color: #333;
+}
+
+#ongoing_shipment_tracking .event-description {
+	margin-bottom: 0.3em;
+	font-weight: 500;
+}
+
+#ongoing_shipment_tracking .event-location {
+	color: #666;
+	font-style: italic;
+}
+
+/* Order list column styling */
+.column-tracking_status {
+    width: 120px;
+}
+
+.tracking-column-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+}
+
+.tracking-link-small {
+    color: #0073aa;
+    text-decoration: none;
+    font-size: 0.8em;
+}
+
+.tracking-link-small:hover {
+    color: #005a87;
+    text-decoration: underline;
+}
+
+.tracking-status {
+    display: inline-block;
+    padding: 0.3em 0.6em;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    min-width: 80px;
+}
+
+.tracking-status.delivered {
+    background: #46b450;
+    color: white;
+}
+
+.tracking-status.available_for_delivery {
+    background: #ffb900;
+    color: #333;
+}
+
+.tracking-status.en_route {
+	background: #0073aa;
+	color: white;
+}
+
+.tracking-status.waiting_to_be_picked {
+	background: #ffc107;
+	color: #333;
+}
+
+.tracking-status.picking {
+	background: #ff6b35;
+	color: white;
+}
+
+.tracking-status.other {
+	background: #666;
+	color: white;
+}
+
+.tracking-status.unknown {
+    background: #ccc;
+    color: #333;
+}
+
+.tracking-status.no-tracking {
+    background: #f1f1f1;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.tracking-status.no-data {
+    background: #f1f1f1;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+/* Quick update interface in order list */
+.tracking-number-input {
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 0.3em 0.5em;
+    font-size: 0.9em;
+}
+
+.tracking-number-input:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+.update-tracking-quick {
+    margin-left: 0.5em;
+    font-size: 0.8em;
+    padding: 0.3em 0.6em;
+}
+
+/* Admin notices */
+.ongoing-tracking-notice {
+    margin: 1em 0;
+}
+
+.ongoing-tracking-notice.notice-success {
+    border-left-color: #46b450;
+}
+
+.ongoing-tracking-notice.notice-error {
+    border-left-color: #dc3232;
+}
+
+/* Meta box button styling */
+#update_tracking {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: white;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+#update_tracking:hover {
+    background: #005a87;
+    border-color: #005a87;
+}
+
+#update_tracking:disabled {
+    background: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Tracking number field styling */
+#ongoing_tracking_number {
+    width: 100%;
+    margin-bottom: 0.5em;
+}
+
+/* Status indicators */
+.tracking-status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5em;
+}
+
+.tracking-status-indicator.delivered {
+    background: #46b450;
+}
+
+.tracking-status-indicator.available_for_delivery {
+    background: #ffb900;
+}
+
+.tracking-status-indicator.en_route {
+    background: #0073aa;
+}
+
+.tracking-status-indicator.other {
+    background: #666;
+}
+
+.tracking-status-indicator.unknown {
+    background: #ccc;
+}
+
+/* Responsive design for admin */
+@media (max-width: 782px) {
+    .column-tracking_status {
+        width: auto;
+    }
+    
+    .tracking-column-content {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5em;
+    }
+    
+    .tracking-link-small {
+        font-size: 0.9em;
+        padding: 0.2em 0.4em;
+        background: #0073aa;
+        color: white;
+        border-radius: 3px;
+        text-decoration: none;
+    }
+    
+    .tracking-link-small:hover {
+        background: #005a87;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .tracking-number-input {
+        width: 100%;
+        margin-bottom: 0.5em;
+    }
+    
+    .update-tracking-quick {
+        width: 100%;
+        margin-top: 0.5em;
+    }
+}
+
+/* Bulk actions styling */
+.bulk-tracking-actions {
+    margin: 1em 0;
+    padding: 1em;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.bulk-tracking-actions h4 {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+.bulk-tracking-actions .button {
+    margin-right: 0.5em;
+}
+
+/* Progress indicators */
+.tracking-progress {
+    margin: 1em 0;
+}
+
+.tracking-progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #f1f1f1;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.tracking-progress-fill {
+    height: 100%;
+    background: #0073aa;
+    transition: width 0.3s ease;
+}
+
+.tracking-progress-text {
+    text-align: center;
+    margin-top: 0.5em;
+    font-size: 0.9em;
+    color: #666;
+} 

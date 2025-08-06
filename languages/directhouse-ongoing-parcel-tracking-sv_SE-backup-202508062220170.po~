@@ -1,0 +1,192 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Ongoing Shipment Tracking\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-06 17:47+0000\n"
+"PO-Revision-Date: 2025-08-06 17:57+0000\n"
+"Last-Translator: \n"
+"Language-Team: Swedish\n"
+"Language: sv_SE\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"X-Loco-Version: 2.8.0; wp-6.8.2; php-7.4.33\n"
+"X-Domain: ongoing-shipment-tracking"
+
+#: includes/class-shipment-tracking-admin.php:80
+msgid "All Tracking Events"
+msgstr "Alla spårningsevenemang"
+
+#: includes/class-shipment-tracking-admin.php:92
+#: includes/class-shipment-tracking-admin.php:178
+#: includes/class-shipment-tracking-frontend.php:98
+#: includes/class-shipment-tracking-frontend.php:309
+msgid "Available for pickup"
+msgstr "Tillgänglig för upphämtning"
+
+#: includes/class-shipment-tracking-admin.php:94
+#: includes/class-shipment-tracking-admin.php:180
+#: includes/class-shipment-tracking-frontend.php:100
+#: includes/class-shipment-tracking-frontend.php:311
+msgid "Being picked"
+msgstr "Blir upphämtad"
+
+#: includes/class-shipment-tracking-frontend.php:94
+msgid "Current Status"
+msgstr "Aktuell status"
+
+#: includes/class-shipment-tracking-admin.php:91
+#: includes/class-shipment-tracking-admin.php:177
+#: includes/class-shipment-tracking-frontend.php:97
+#: includes/class-shipment-tracking-frontend.php:308
+msgid "Delivered"
+msgstr "Levererad"
+
+#: includes/class-shipment-tracking-admin.php:65
+msgid "Enter the tracking number from the warehouse system."
+msgstr "Ange spårningsnumret från lagersystemet."
+
+#: includes/class-shipment-tracking-frontend.php:220
+msgid "Error updating tracking information."
+msgstr "Fel vid uppdatering av spårningsinformation."
+
+#: includes/class-shipment-tracking-admin.php:224
+msgid "Error updating tracking."
+msgstr "Fel vid uppdatering av spårning."
+
+#: includes/class-shipment-tracking-cron.php:40
+msgid "Every Hour"
+msgstr "Varje timme"
+
+#. URI of the plugin
+msgid "https://www.comfyballs.no"
+msgstr "https://www.comfyballs.no"
+
+#: includes/class-shipment-tracking-admin.php:93
+#: includes/class-shipment-tracking-admin.php:179
+#: includes/class-shipment-tracking-frontend.php:99
+#: includes/class-shipment-tracking-frontend.php:310
+msgid "In transit"
+msgstr "I transit"
+
+#: includes/class-shipment-tracking-admin.php:54
+msgid "Invalid order."
+msgstr "Ogiltig beställning."
+
+#: includes/class-shipment-tracking-admin.php:74
+#: includes/class-shipment-tracking-frontend.php:75
+msgid "Last updated:"
+msgstr "Senast uppdaterad:"
+
+#: includes/class-shipment-tracking-admin.php:190
+#: includes/class-shipment-tracking-frontend.php:321
+msgid "No data"
+msgstr "Ingen data"
+
+#: includes/class-shipment-tracking-admin.php:168
+#: includes/class-shipment-tracking-frontend.php:302
+msgid "No tracking"
+msgstr "Ingen spårning"
+
+#: includes/class-shipment-tracking-frontend.php:69
+msgid "No tracking information available yet. Please check back later."
+msgstr ""
+"Ingen spårningsinformation tillgänglig än. Vänligen kolla tillbaka senare."
+
+#: includes/class-shipment-tracking-admin.php:119
+msgid "No tracking information available."
+msgstr "Ingen spårningsinformation tillgänglig."
+
+#. Name of the plugin
+msgid "Ongoing Shipment Tracking"
+msgstr "Pågående fraktspårning"
+
+#: ongoing-shipment-tracking.php:30
+msgid ""
+"Ongoing Shipment Tracking requires WooCommerce to be installed and activated."
+msgstr ""
+"Pågående fraktspårning kräver att WooCommerce är installerat och aktiverat."
+
+#: includes/class-shipment-tracking-cron.php:127
+msgid "Order delivered according to tracking information."
+msgstr "Beställning levererad enligt spårningsinformation."
+
+#: includes/class-shipment-tracking-admin.php:95
+#: includes/class-shipment-tracking-admin.php:181
+msgid "Other"
+msgstr "Annat"
+
+#: includes/class-shipment-tracking-frontend.php:101
+#: includes/class-shipment-tracking-frontend.php:312
+msgid "Processing"
+msgstr "Bearbetar"
+
+#: includes/class-shipment-tracking-frontend.php:115
+msgid "Refresh tracking information"
+msgstr "Uppdatera spårningsinformation"
+
+#: includes/class-shipment-tracking-frontend.php:285
+msgid "Shipment Status"
+msgstr "Fraktstatus"
+
+#: includes/class-shipment-tracking-admin.php:37
+#: includes/class-shipment-tracking-frontend.php:57
+msgid "Shipment Tracking"
+msgstr "Fraktspårning"
+
+#. Author of the plugin
+msgid "Thomas Audunhus"
+msgstr "Thomas Audunhus"
+
+#. Description of the plugin
+msgid "Track shipments using the DirectHouse warehouse API."
+msgstr "Spåra försändelser med hjälp av DirectHouse lager-API."
+
+#: includes/class-shipment-tracking-admin.php:140
+msgid "Tracking"
+msgstr "Spårning"
+
+#: includes/class-shipment-tracking-frontend.php:60
+msgid "Tracking information is not yet available for this order."
+msgstr "Spårningsinformation är ännu inte tillgänglig för denna beställning."
+
+#: includes/class-shipment-tracking-frontend.php:219
+msgid "Tracking information updated!"
+msgstr "Spårningsinformation uppdaterad!"
+
+#: includes/class-shipment-tracking-admin.php:63
+msgid "Tracking Number:"
+msgstr "Spårningsnummer:"
+
+#: includes/class-shipment-tracking-frontend.php:134
+msgid "Tracking Timeline"
+msgstr "Spårningstidslinje"
+
+#: includes/class-shipment-tracking-cron.php:157
+msgid "Tracking update completed"
+msgstr "Spårningsuppdatering slutförd"
+
+#: includes/class-shipment-tracking-admin.php:223
+msgid "Tracking updated successfully!"
+msgstr "Spårning uppdaterad framgångsrikt!"
+
+#: includes/class-shipment-tracking-admin.php:96
+#: includes/class-shipment-tracking-admin.php:182
+#: includes/class-shipment-tracking-frontend.php:102
+#: includes/class-shipment-tracking-frontend.php:313
+msgid "Unknown"
+msgstr "Okänd"
+
+#: includes/class-shipment-tracking-admin.php:69
+msgid "Update Tracking"
+msgstr "Uppdatera spårning"
+
+#: includes/class-shipment-tracking-frontend.php:218
+msgid "Updating tracking information..."
+msgstr "Uppdaterar spårningsinformation..."
+
+#: includes/class-shipment-tracking-admin.php:222
+msgid "Updating..."
+msgstr "Uppdaterar..."
