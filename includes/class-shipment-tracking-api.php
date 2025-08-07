@@ -45,16 +45,43 @@ class ShipmentTrackingAPI {
 
 		$url = $this->api_base_url . 'fullOrderTracking/' . urlencode( $tracking_number );
 		
+		// Debug: Log the URL being called
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::log( sprintf( 'Calling API URL: %s', $url ) );
+		}
+		
+		if(defined('WP_ENV') && WP_ENV === 'local') {
+			$curl_timeout = 5;
+		}else{
+			$curl_timeout = 3;
+		}
+		
 		$response = wp_remote_get( $url, [
-			'timeout' => 30,
+			'timeout' => $curl_timeout, 
 			'headers' => [
-				'User-Agent' => 'Ongoing-Shipment-Tracking/' . PLUGIN_VERSION,
+				'User-Agent' => 'WP-Ongoing-Shipment-Tracking/1.0.0 ('.get_bloginfo('url').')',
 				'Accept'     => 'application/json',
 			],
 		] );
 
 		if ( is_wp_error( $response ) ) {
-			return new \WP_Error( 'api_request_failed', 'Failed to connect to tracking API: ' . $response->get_error_message() );
+			// Debug: Log the URL being called
+			if ( defined( 'WP_CLI' ) && WP_CLI ) {
+				\WP_CLI::log( sprintf('Retrying %s', $url ) );
+			}
+			
+			sleep(5);
+			$response = wp_remote_get( $url, [
+				'timeout' => $curl_timeout, 
+				'headers' => [
+					'User-Agent' => 'WP-Ongoing-Shipment-Tracking/1.0.0 ('.get_bloginfo('url').')',
+					'Accept'     => 'application/json',
+				],
+			] );
+
+			if ( is_wp_error( $response ) ) {
+				return new \WP_Error( 'api_request_failed', 'Failed to connect to tracking API: ' . $response->get_error_message() );
+			}
 		}
 
 		$status_code = wp_remote_retrieve_response_code( $response );
@@ -92,22 +119,25 @@ class ShipmentTrackingAPI {
 	}
 
 	/**
-	 * Format events for display
+	 * Format events from API response
 	 *
 	 * @param array $events Raw events from API
 	 * @return array Formatted events
 	 */
-	private function format_events( $events ) {
+	public function format_events( $events ) {
 		$formatted = [];
 
 		foreach ( $events as $event ) {
+			// Get UTC timestamp for consistent timezone handling
+			$utc_timestamp = $this->get_utc_timestamp( $event['date'] ?? '' );
+			
 			$formatted_event = [
 				'date' => $this->format_date( $event['date'] ?? '' ),
 				'description' => $event['eventdescription'] ?? '', // Store original, translate at display time
 				'location' => $event['location'] ?? '',
 				'type' => $event['type'] ?? '',
 				'transporter_status' => $event['transporter_status'] ?? '',
-				'timestamp' => $event['timestamp'] ?? 0,
+				'timestamp' => $utc_timestamp, // Use UTC timestamp for consistency
 				'status_class' => $this->get_status_class( $event ),
 			];
 
@@ -181,7 +211,7 @@ class ShipmentTrackingAPI {
 			// Create DateTime object from the ISO 8601 date string
 			$date = new \DateTime( $date_string );
 			
-			// Convert to WordPress timezone
+			// Convert to WordPress timezone for display
 			$wp_timezone = wp_timezone();
 			$date->setTimezone( $wp_timezone );
 			
@@ -189,6 +219,28 @@ class ShipmentTrackingAPI {
 			return $date->format( 'Y-m-d H:i:s' );
 		} catch ( \Exception $e ) {
 			return $date_string;
+		}
+	}
+
+	/**
+	 * Get UTC timestamp from date string
+	 *
+	 * @param string $date_string Date string from API
+	 * @return int UTC timestamp
+	 */
+	private function get_utc_timestamp( $date_string ) {
+		if ( empty( $date_string ) ) {
+			return 0;
+		}
+
+		try {
+			// Create DateTime object from the ISO 8601 date string
+			$date = new \DateTime( $date_string );
+			
+			// Return UTC timestamp
+			return $date->getTimestamp();
+		} catch ( \Exception $e ) {
+			return 0;
 		}
 	}
 

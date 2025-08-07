@@ -152,6 +152,12 @@ class ShipmentTrackingAdmin {
 	 * @return array Modified columns
 	 */
 	public function add_tracking_column( $columns ) {
+		// Check if tracking column is enabled
+		$enable_tracking_column = get_option( 'ongoing_shipment_tracking_enable_column', 'yes' );
+		if ( $enable_tracking_column !== 'yes' ) {
+			return $columns;
+		}
+
 		$new_columns = [];
 		
 		foreach ( $columns as $key => $column ) {
@@ -177,6 +183,25 @@ class ShipmentTrackingAdmin {
 			return;
 		}
 
+		// Prevent duplicate output by checking if content already exists
+		static $processed_orders = [];
+		if ( in_array( $post_id, $processed_orders ) ) {
+			return;
+		}
+		$processed_orders[] = $post_id;
+
+		// Cache expensive objects - only create once
+		static $tracking = null;
+		static $api = null;
+		static $shipping_method_cache = [];
+		
+		if ( $tracking === null ) {
+			$tracking = new ShipmentTracking();
+		}
+		if ( $api === null ) {
+			$api = new ShipmentTrackingAPI();
+		}
+
 		$order = wc_get_order( $post_id );
 		
 		if ( ! $order ) {
@@ -191,10 +216,12 @@ class ShipmentTrackingAdmin {
 			return;
 		}
 
-		// Get shipping method ID for tracking link
-		$tracking = new ShipmentTracking();
-		$shipping_method_info = $tracking->get_shipping_method_info( $post_id );
-		$api = new ShipmentTrackingAPI();
+		// Cache shipping method info to avoid repeated expensive operations
+		if ( ! isset( $shipping_method_cache[ $post_id ] ) ) {
+			$shipping_method_cache[ $post_id ] = $tracking->get_shipping_method_info( $post_id );
+		}
+		$shipping_method_info = $shipping_method_cache[ $post_id ];
+		
 		$tracking_link = $api->get_tracking_link( 
 			$tracking_number, 
 			$shipping_method_info['method_id'],
@@ -203,7 +230,6 @@ class ShipmentTrackingAdmin {
 		);
 
 		if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
-			$api = new ShipmentTrackingAPI();
 			$latest_status = $api->get_latest_status( $tracking_data['events'] );
 			
 			$status_labels = [
@@ -222,19 +248,11 @@ class ShipmentTrackingAdmin {
 			echo '<div class="tracking-column-content">';
 			echo '<span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
 			
-			// Add tracking link if available
-			if ( $tracking_link ) {
-				echo '<br><small><a href="' . esc_url( $tracking_link ) . '" target="_blank" class="tracking-link-small">' . esc_html__( 'Track', 'directhouse-ongoing-parcel-tracking' ) . '</a></small>';
-			}
 			echo '</div>';
 		} else {
 			echo '<div class="tracking-column-content">';
 			echo '<span class="tracking-status no-data">' . esc_html__( 'No data', 'directhouse-ongoing-parcel-tracking' ) . '</span>';
 			
-			// Add tracking link if available (even without tracking data)
-			if ( $tracking_link ) {
-				echo '<br><small><a href="' . esc_url( $tracking_link ) . '" target="_blank" class="tracking-link-small">' . esc_html__( 'Track', 'directhouse-ongoing-parcel-tracking' ) . '</a></small>';
-			}
 			echo '</div>';
 		}
 	}
@@ -493,6 +511,24 @@ class ShipmentTrackingAdmin {
 				'default' => 'yes'
 			],
 			[
+				'name' => __( 'Enable Tracking Column', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'checkbox',
+				'desc' => __( 'Enable the tracking status column in the orders list table. Disable this if the orders list becomes slow.', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_enable_column',
+				'default' => 'yes'
+			],
+			[
+				'name' => __( 'Max Updates Per Run', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'number',
+				'desc' => __( 'Maximum number of orders to update per cron run. Set to 0 for no limit.', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_max_updates_per_run',
+				'default' => '50',
+				'custom_attributes' => [
+					'min' => '0',
+					'step' => '1',
+				],
+			],
+			[
 				'name' => __( 'Order Status Settings', 'directhouse-ongoing-parcel-tracking' ),
 				'type' => 'title',
 				'desc' => __( 'Select which order statuses should be automatically updated.', 'directhouse-ongoing-parcel-tracking' ),
@@ -528,28 +564,55 @@ class ShipmentTrackingAdmin {
 				<label for="<?php echo esc_attr( $field_id ); ?>"><?php echo esc_html( $value['name'] ); ?></label>
 			</th>
 			<td class="forminp forminp-<?php echo esc_attr( sanitize_title( $value['type'] ) ); ?>">
-				<?php foreach ( $order_statuses as $status_key => $status_label ) : ?>
-					<?php
-					$option_id = 'ongoing_shipment_tracking_status_' . $status_key;
-					$option_value = get_option( $option_id, in_array( $status_key, [ 'wc-processing', 'wc-completed' ] ) ? 'yes' : 'no' );
-					?>
-					<fieldset>
-						<legend class="screen-reader-text"><span><?php echo esc_html( $status_label ); ?></span></legend>
-						<label for="<?php echo esc_attr( $option_id ); ?>">
-							<input
-								name="<?php echo esc_attr( $option_id ); ?>"
-								id="<?php echo esc_attr( $option_id ); ?>"
-								type="checkbox"
-								value="yes"
-								<?php checked( $option_value, 'yes' ); ?>
-							/>
-							<?php echo esc_html( $status_label ); ?>
-						</label>
-					</fieldset>
-				<?php endforeach; ?>
-				<?php if ( ! empty( $value['desc'] ) ) : ?>
-					<p class="description"><?php echo esc_html( $value['desc'] ); ?></p>
-				<?php endif; ?>
+				<table class="widefat" style="margin-bottom: 10px;">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Order Status', 'directhouse-ongoing-parcel-tracking' ); ?></th>
+							<th><?php esc_html_e( 'Enable Updates', 'directhouse-ongoing-parcel-tracking' ); ?></th>
+							<th><?php esc_html_e( 'Max Age (days)', 'directhouse-ongoing-parcel-tracking' ); ?></th>
+							<th><?php esc_html_e( 'Update Interval', 'directhouse-ongoing-parcel-tracking' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $order_statuses as $status_key => $status_label ) : ?>
+							<?php
+							$option_id = 'ongoing_shipment_tracking_status_' . $status_key;
+							$age_option_id = 'ongoing_shipment_tracking_age_' . $status_key;
+							$interval_option_id = 'ongoing_shipment_tracking_interval_' . $status_key;
+							
+							$option_value = get_option( $option_id, 'no' ); // Default to 'no'
+							$age_value = get_option( $age_option_id, '30' );
+							$interval_value = get_option( $interval_option_id, 'default' );
+							?>
+							<tr>
+								<td><strong><?php echo esc_html( $status_label ); ?></strong></td>
+								<td><input name="<?php echo esc_attr( $option_id ); ?>" id="<?php echo esc_attr( $option_id ); ?>" type="checkbox" value="yes" <?php checked( $option_value, 'yes' ); ?> /></td>
+								<td><input name="<?php echo esc_attr( $age_option_id ); ?>" id="<?php echo esc_attr( $age_option_id ); ?>" type="number" value="<?php echo esc_attr( $age_value ); ?>" min="0" step="1" style="width: 80px;" placeholder="30" /> <span style="color: #666; font-size: 12px;"><?php esc_html_e( 'days (0 = no limit)', 'directhouse-ongoing-parcel-tracking' ); ?></span></td>
+								<td>
+									<select name="<?php echo esc_attr( $interval_option_id ); ?>" id="<?php echo esc_attr( $interval_option_id ); ?>" style="width: 150px;">
+										<option value="default" <?php selected( $interval_value, 'default' ); ?>><?php esc_html_e( 'Use Global Interval', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_15_minutes" <?php selected( $interval_value, 'every_15_minutes' ); ?>><?php esc_html_e( 'Every 15 Minutes', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_30_minutes" <?php selected( $interval_value, 'every_30_minutes' ); ?>><?php esc_html_e( 'Every 30 Minutes', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_45_minutes" <?php selected( $interval_value, 'every_45_minutes' ); ?>><?php esc_html_e( 'Every 45 Minutes', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="hourly" <?php selected( $interval_value, 'hourly' ); ?>><?php esc_html_e( 'Hourly', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_2_hours" <?php selected( $interval_value, 'every_2_hours' ); ?>><?php esc_html_e( 'Every 2 Hours', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_3_hours" <?php selected( $interval_value, 'every_3_hours' ); ?>><?php esc_html_e( 'Every 3 Hours', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_4_hours" <?php selected( $interval_value, 'every_4_hours' ); ?>><?php esc_html_e( 'Every 4 Hours', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_6_hours" <?php selected( $interval_value, 'every_6_hours' ); ?>><?php esc_html_e( 'Every 6 Hours', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_8_hours" <?php selected( $interval_value, 'every_8_hours' ); ?>><?php esc_html_e( 'Every 8 Hours', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="every_12_hours" <?php selected( $interval_value, 'every_12_hours' ); ?>><?php esc_html_e( 'Every 12 Hours', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="twicedaily" <?php selected( $interval_value, 'twicedaily' ); ?>><?php esc_html_e( 'Twice Daily', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="daily" <?php selected( $interval_value, 'daily' ); ?>><?php esc_html_e( 'Daily', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+										<option value="weekly" <?php selected( $interval_value, 'weekly' ); ?>><?php esc_html_e( 'Weekly', 'directhouse-ongoing-parcel-tracking' ); ?></option>
+									</select>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php if ( ! empty( $value['desc'] ) ) : ?><p class="description"><?php echo esc_html( $value['desc'] ); ?></p><?php endif; ?>
+				<p class="description"><strong><?php esc_html_e( 'Age Limit:', 'directhouse-ongoing-parcel-tracking' ); ?></strong> <?php esc_html_e( 'Only update orders newer than this many days. Set to 0 for no limit.', 'directhouse-ongoing-parcel-tracking' ); ?></p>
+				<p class="description"><strong><?php esc_html_e( 'Update Interval:', 'directhouse-ongoing-parcel-tracking' ); ?></strong> <?php esc_html_e( 'How often to update orders with this status. "Use Global Interval" uses the main cron interval setting.', 'directhouse-ongoing-parcel-tracking' ); ?></p>
 			</td>
 		</tr>
 		<?php
@@ -561,6 +624,31 @@ class ShipmentTrackingAdmin {
 	public function save_settings() {
 		$section = filter_input( INPUT_GET, 'section', FILTER_SANITIZE_STRING );
 		if ( 'directhouse-ongoing-parcel-tracking' === $section ) {
+			// Save individual status options
+			$order_statuses = wc_get_order_statuses();
+			
+			foreach ( $order_statuses as $status_key => $status_label ) {
+				$option_id = 'ongoing_shipment_tracking_status_' . $status_key;
+				$age_option_id = 'ongoing_shipment_tracking_age_' . $status_key;
+				$interval_option_id = 'ongoing_shipment_tracking_interval_' . $status_key;
+				
+				// Save enable/disable setting
+				$enabled = isset( $_POST[ $option_id ] ) ? 'yes' : 'no';
+				update_option( $option_id, $enabled );
+				
+				// Save age limit
+				if ( isset( $_POST[ $age_option_id ] ) ) {
+					$age_limit = intval( $_POST[ $age_option_id ] );
+					update_option( $age_option_id, $age_limit );
+				}
+				
+				// Save interval
+				if ( isset( $_POST[ $interval_option_id ] ) ) {
+					$interval = sanitize_text_field( $_POST[ $interval_option_id ] );
+					update_option( $interval_option_id, $interval );
+				}
+			}
+			
 			// Reschedule cron job with new settings
 			$cron = new ShipmentTrackingCron();
 			$cron->reschedule();

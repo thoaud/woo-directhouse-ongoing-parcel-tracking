@@ -99,14 +99,6 @@ jQuery(document).ready(function($) {
     $('.order_actions').each(function() {
         var $actions = $(this);
         var orderId = $actions.closest('tr').find('.check-column input').val();
-        
-        // Add tracking number input if not already present
-        if (!$actions.find('.tracking-number-input').length) {
-            var $input = $('<input type="text" class="tracking-number-input" placeholder="Tracking #" style="width: 100px; margin-right: 5px;" />');
-            var $updateBtn = $('<button type="button" class="button update-tracking-quick" data-order-id="' + orderId + '">Update</button>');
-            
-            $actions.prepend($input).prepend($updateBtn);
-        }
     });
 
     // Handle quick update buttons in order list
