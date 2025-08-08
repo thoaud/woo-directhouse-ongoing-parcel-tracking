@@ -3,7 +3,7 @@
  * Plugin Name: DirectHouse Ongoing Parcel Tracking
  * Plugin URI: https://www.comfyballs.no
  * Description: Track shipments using the DirectHouse warehouse API.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Text Domain: directhouse-ongoing-parcel-tracking
  * Domain Path: /languages/
  * Author: Thomas Audunhus
@@ -52,11 +52,13 @@ add_action(
 );
 
 // Include required files
-require_once PLUGIN_PATH . 'includes/class-shipment-tracking.php';
-require_once PLUGIN_PATH . 'includes/class-shipment-tracking-api.php';
-require_once PLUGIN_PATH . 'includes/class-shipment-tracking-cron.php';
-require_once PLUGIN_PATH . 'includes/class-shipment-tracking-admin.php';
-require_once PLUGIN_PATH . 'includes/class-shipment-tracking-frontend.php';
+$__ongoing_base_path = plugin_dir_path( __FILE__ );
+require_once $__ongoing_base_path . 'includes/class-shipment-tracking.php';
+require_once $__ongoing_base_path . 'includes/class-shipment-tracking-api.php';
+require_once $__ongoing_base_path . 'includes/class-shipment-tracking-cron.php';
+require_once $__ongoing_base_path . 'includes/class-shipment-tracking-admin.php';
+require_once $__ongoing_base_path . 'includes/class-shipment-tracking-frontend.php';
+require_once $__ongoing_base_path . 'includes/class-shipment-tracking-repository.php';
 
 // Initialize the plugin
 add_action( 'plugins_loaded', __NAMESPACE__ . '\\init' );
@@ -74,6 +76,9 @@ register_activation_hook(
 			wp_schedule_event( time(), 'hourly', 'ongoing_shipment_tracking_cron' );
 		}
 		
+        // Create tables (network-safe)
+        \Ongoing\ShipmentTracking\ShipmentTrackingRepository::create_table_network();
+
 		// Flush rewrite rules
 		flush_rewrite_rules();
 	}
@@ -90,3 +95,16 @@ register_deactivation_hook(
 		flush_rewrite_rules();
 	}
 ); 
+
+// Uninstall hook: remove custom tables and cleanup
+register_uninstall_hook(
+    __FILE__,
+    __NAMESPACE__ . '\\handle_uninstall'
+);
+
+/**
+ * Handle plugin uninstall cleanup.
+ */
+function handle_uninstall() {
+    \Ongoing\ShipmentTracking\ShipmentTrackingRepository::drop_table_network();
+}

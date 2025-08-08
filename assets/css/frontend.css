@@ -126,6 +126,11 @@
 	color: white;
 }
 
+.tracking-status-sent {
+	background: #5bc0de; /* info tone */
+	color: white;
+}
+
 .tracking-status-waiting_to_be_picked {
 	background: #ffc107;
 	color: #333;
@@ -230,6 +235,11 @@
 .tracking-event.status-en-route::before {
     background: #0073aa;
     box-shadow: 0 0 0 2px #0073aa;
+}
+
+.tracking-event.status-sent::before {
+    background: #5bc0de;
+    box-shadow: 0 0 0 2px #5bc0de;
 }
 
 .event-date {

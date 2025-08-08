@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Ongoing Shipment Tracking\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-06 22:18+0000\n"
+"POT-Creation-Date: 2025-08-08 01:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: \n"
@@ -16,135 +16,190 @@ msgstr ""
 "X-Loco-Version: 2.8.0; wp-6.8.2; php-7.4.33\n"
 "X-Domain: ongoing-shipment-tracking"
 
-#: includes/class-shipment-tracking-api.php:138
-#: includes/class-shipment-tracking-admin.php:387
-#: includes/class-shipment-tracking-frontend.php:314
+#: includes/class-shipment-tracking-api.php:168
+#: includes/class-shipment-tracking-admin.php:437
+#: includes/class-shipment-tracking-frontend.php:355
 msgid "A text message notification has been delivered to the recipient."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:99
+#: includes/class-shipment-tracking-admin.php:653
+msgid "Age Limit:"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:101
 msgid "All Tracking Events"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:111
-#: includes/class-shipment-tracking-admin.php:211
-#: includes/class-shipment-tracking-frontend.php:130
-#: includes/class-shipment-tracking-frontend.php:466
+#: includes/class-shipment-tracking-admin.php:113
+#: includes/class-shipment-tracking-admin.php:260
+#: includes/class-shipment-tracking-frontend.php:132
+#: includes/class-shipment-tracking-frontend.php:507
 msgid "Available for pickup"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:114
-#: includes/class-shipment-tracking-admin.php:214
-#: includes/class-shipment-tracking-frontend.php:133
-#: includes/class-shipment-tracking-frontend.php:469
+#: includes/class-shipment-tracking-admin.php:117
+#: includes/class-shipment-tracking-admin.php:263
+#: includes/class-shipment-tracking-frontend.php:136
+#: includes/class-shipment-tracking-frontend.php:510
 msgid "Being picked"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:456
+#: includes/class-shipment-tracking-admin.php:506
 msgid "Configure automatic tracking updates and order status filtering."
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:119
+#: includes/class-shipment-tracking-frontend.php:121
 msgid "Current Status"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:221
+#: includes/class-shipment-tracking-frontend.php:243
 msgid "Customer Details"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:483
+#: includes/class-shipment-tracking-admin.php:533
+#: includes/class-shipment-tracking-admin.php:644
 msgid "Daily"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:110
-#: includes/class-shipment-tracking-admin.php:210
-#: includes/class-shipment-tracking-frontend.php:129
-#: includes/class-shipment-tracking-frontend.php:465
+#: includes/class-shipment-tracking-admin.php:629
+msgid "days (0 = no limit)"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:112
+#: includes/class-shipment-tracking-admin.php:259
+#: includes/class-shipment-tracking-frontend.php:131
+#: includes/class-shipment-tracking-frontend.php:506
 msgid "Delivered"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:72
+#: includes/class-shipment-tracking-frontend.php:74
 msgid "Delivery Tracking"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:462
+#. Name of the plugin
+#: includes/class-shipment-tracking-admin.php:485
+#: includes/class-shipment-tracking-admin.php:504
+msgid "DirectHouse Ongoing Parcel Tracking"
+msgstr ""
+
+#: woo-directhouse-ongoing-parcel-tracking.php:30
+msgid ""
+"DirectHouse Ongoing Parcel Tracking requires WooCommerce to be installed and "
+"activated."
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:512
 msgid "Enable automatic tracking updates via cron job"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:460
+#: includes/class-shipment-tracking-admin.php:510
 msgid "Enable Cron Updates"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:84
+#: includes/class-shipment-tracking-admin.php:553
+msgid "Enable Status Emojis"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:548
+msgid ""
+"Enable the tracking status column in the orders list table. Disable this if "
+"the orders list becomes slow."
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:546
+msgid "Enable Tracking Column"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:610
+msgid "Enable Updates"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:86
 msgid "Enter the tracking number from the warehouse system."
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:377
+#: includes/class-shipment-tracking-frontend.php:418
 msgid "Error updating tracking information."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:272
+#: includes/class-shipment-tracking-admin.php:312
 msgid "Error updating tracking."
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:80
-#: includes/class-shipment-tracking-admin.php:481
+#: includes/class-shipment-tracking-cron.php:81
+#: includes/class-shipment-tracking-admin.php:531
+#: includes/class-shipment-tracking-admin.php:642
 msgid "Every 12 Hours"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:40
-#: includes/class-shipment-tracking-admin.php:472
+#: includes/class-shipment-tracking-cron.php:41
+#: includes/class-shipment-tracking-admin.php:522
+#: includes/class-shipment-tracking-admin.php:633
 msgid "Every 15 Minutes"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:55
-#: includes/class-shipment-tracking-admin.php:476
+#: includes/class-shipment-tracking-cron.php:56
+#: includes/class-shipment-tracking-admin.php:526
+#: includes/class-shipment-tracking-admin.php:637
 msgid "Every 2 Hours"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:60
-#: includes/class-shipment-tracking-admin.php:477
+#: includes/class-shipment-tracking-cron.php:61
+#: includes/class-shipment-tracking-admin.php:527
+#: includes/class-shipment-tracking-admin.php:638
 msgid "Every 3 Hours"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:45
-#: includes/class-shipment-tracking-admin.php:473
+#: includes/class-shipment-tracking-cron.php:46
+#: includes/class-shipment-tracking-admin.php:523
+#: includes/class-shipment-tracking-admin.php:634
 msgid "Every 30 Minutes"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:65
-#: includes/class-shipment-tracking-admin.php:478
+#: includes/class-shipment-tracking-cron.php:66
+#: includes/class-shipment-tracking-admin.php:528
+#: includes/class-shipment-tracking-admin.php:639
 msgid "Every 4 Hours"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:50
-#: includes/class-shipment-tracking-admin.php:474
+#: includes/class-shipment-tracking-cron.php:51
+#: includes/class-shipment-tracking-admin.php:524
+#: includes/class-shipment-tracking-admin.php:635
 msgid "Every 45 Minutes"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:70
-#: includes/class-shipment-tracking-admin.php:479
+#: includes/class-shipment-tracking-cron.php:71
+#: includes/class-shipment-tracking-admin.php:529
+#: includes/class-shipment-tracking-admin.php:640
 msgid "Every 6 Hours"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:75
-#: includes/class-shipment-tracking-admin.php:480
+#: includes/class-shipment-tracking-cron.php:76
+#: includes/class-shipment-tracking-admin.php:530
+#: includes/class-shipment-tracking-admin.php:641
 msgid "Every 8 Hours"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:85
+#: includes/class-shipment-tracking-cron.php:86
 msgid "Every Hour"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:489
+#: includes/class-shipment-tracking-admin.php:539
 msgid "Exclude Delivered Orders"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:475
+#: includes/class-shipment-tracking-admin.php:525
+#: includes/class-shipment-tracking-admin.php:636
 msgid "Hourly"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:469
+#: includes/class-shipment-tracking-admin.php:654
+msgid ""
+"How often to update orders with this status. \"Use Global Interval\" uses "
+"the main cron interval setting."
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:519
 msgid "How often to update tracking information"
 msgstr ""
 
@@ -152,10 +207,10 @@ msgstr ""
 msgid "https://www.comfyballs.no"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:112
-#: includes/class-shipment-tracking-admin.php:212
-#: includes/class-shipment-tracking-frontend.php:131
-#: includes/class-shipment-tracking-frontend.php:467
+#: includes/class-shipment-tracking-admin.php:114
+#: includes/class-shipment-tracking-admin.php:261
+#: includes/class-shipment-tracking-frontend.php:133
+#: includes/class-shipment-tracking-frontend.php:508
 msgid "In transit"
 msgstr ""
 
@@ -163,102 +218,117 @@ msgstr ""
 msgid "Invalid order."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:93
-#: includes/class-shipment-tracking-frontend.php:124
+#: includes/class-shipment-tracking-admin.php:95
+#: includes/class-shipment-tracking-frontend.php:126
 msgid "Last updated:"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:232
-#: includes/class-shipment-tracking-frontend.php:479
+#: includes/class-shipment-tracking-admin.php:611
+msgid "Max Age (days)"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:560
+msgid "Max Updates Per Run"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:562
+msgid "Maximum number of orders to update per cron run. Set to 0 for no limit."
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:277
+#: includes/class-shipment-tracking-frontend.php:520
 msgid "No data"
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:146
-#: includes/class-shipment-tracking-admin.php:395
-#: includes/class-shipment-tracking-frontend.php:322
+#: includes/class-shipment-tracking-api.php:176
+#: includes/class-shipment-tracking-admin.php:445
+#: includes/class-shipment-tracking-frontend.php:363
 msgid ""
 "No further tracking information is available. If the transporter has a "
 "separate app, you may be notified there, or via SMS or email when the parcel "
 "is delivered."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:190
-#: includes/class-shipment-tracking-frontend.php:459
+#: includes/class-shipment-tracking-admin.php:238
+#: includes/class-shipment-tracking-frontend.php:500
 msgid "No tracking"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:95
+#: includes/class-shipment-tracking-frontend.php:97
 msgid "No tracking information available yet. Please check back later."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:139
+#: includes/class-shipment-tracking-admin.php:161
 msgid "No tracking information available."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:76
+#: includes/class-shipment-tracking-admin.php:78
 msgid "No tracking number available for this order."
 msgstr ""
 
-#. Name of the plugin
-#: includes/class-shipment-tracking-admin.php:435
-#: includes/class-shipment-tracking-admin.php:454
-msgid "Ongoing Shipment Tracking"
-msgstr ""
-
-#: ongoing-shipment-tracking.php:30
-msgid ""
-"Ongoing Shipment Tracking requires WooCommerce to be installed and activated."
+#: includes/class-shipment-tracking-admin.php:653
+msgid "Only update orders newer than this many days. Set to 0 for no limit."
 msgstr ""
 
 #: includes/class-shipment-tracking-cron.php:208
+#: includes/class-shipment-tracking-cron.php:345
 msgid "Order delivered according to tracking information."
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:199
+#: includes/class-shipment-tracking-frontend.php:221
 msgid "Order details"
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:135
-#: includes/class-shipment-tracking-admin.php:384
-#: includes/class-shipment-tracking-frontend.php:311
+#: includes/class-shipment-tracking-api.php:165
+#: includes/class-shipment-tracking-admin.php:434
+#: includes/class-shipment-tracking-frontend.php:352
 msgid ""
 "Order has been picked and is ready for further processing in the warehouse"
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:134
-#: includes/class-shipment-tracking-admin.php:383
-#: includes/class-shipment-tracking-frontend.php:310
+#: includes/class-shipment-tracking-api.php:164
+#: includes/class-shipment-tracking-admin.php:433
+#: includes/class-shipment-tracking-frontend.php:351
 msgid "Order has been placed in the warehouse and will be prepared for picking"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:496
+#: includes/class-shipment-tracking-admin.php:609
+msgid "Order Status"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:571
 msgid "Order Status Settings"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:502
+#: includes/class-shipment-tracking-admin.php:577
 msgid "Order Statuses"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:115
-#: includes/class-shipment-tracking-admin.php:215
+#: includes/class-shipment-tracking-admin.php:118
+#: includes/class-shipment-tracking-admin.php:264
 msgid "Other"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:134
-#: includes/class-shipment-tracking-frontend.php:470
+#: includes/class-shipment-tracking-frontend.php:137
+#: includes/class-shipment-tracking-frontend.php:511
 msgid "Processing"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:148
+#: includes/class-shipment-tracking-frontend.php:170
 msgid "Refresh tracking information"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:498
-#: includes/class-shipment-tracking-admin.php:504
+#: includes/class-shipment-tracking-admin.php:573
+#: includes/class-shipment-tracking-admin.php:579
 msgid "Select which order statuses should be automatically updated."
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:442
+#: includes/class-shipment-tracking-admin.php:115
+#: includes/class-shipment-tracking-frontend.php:134
+msgid "Sent"
+msgstr ""
+
+#: includes/class-shipment-tracking-frontend.php:483
 msgid "Shipment Status"
 msgstr ""
 
@@ -266,55 +336,59 @@ msgstr ""
 msgid "Shipment Tracking"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:491
+#: includes/class-shipment-tracking-admin.php:555
+msgid "Show emojis next to statuses in admin and customer views."
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:541
 msgid "Skip orders that are already marked as delivered"
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:142
-#: includes/class-shipment-tracking-admin.php:391
-#: includes/class-shipment-tracking-frontend.php:318
+#: includes/class-shipment-tracking-api.php:172
+#: includes/class-shipment-tracking-admin.php:441
+#: includes/class-shipment-tracking-frontend.php:359
 msgid "The delivery of the shipment item is in progress."
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:141
-#: includes/class-shipment-tracking-admin.php:390
-#: includes/class-shipment-tracking-frontend.php:317
+#: includes/class-shipment-tracking-api.php:171
+#: includes/class-shipment-tracking-admin.php:440
+#: includes/class-shipment-tracking-frontend.php:358
 msgid "The shipment item has arrived at the distribution terminal."
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:140
-#: includes/class-shipment-tracking-admin.php:389
-#: includes/class-shipment-tracking-frontend.php:316
+#: includes/class-shipment-tracking-api.php:170
+#: includes/class-shipment-tracking-admin.php:439
+#: includes/class-shipment-tracking-frontend.php:357
 msgid "The shipment item has been delivered to a service point."
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:144
-#: includes/class-shipment-tracking-admin.php:393
-#: includes/class-shipment-tracking-frontend.php:320
+#: includes/class-shipment-tracking-api.php:174
+#: includes/class-shipment-tracking-admin.php:443
+#: includes/class-shipment-tracking-frontend.php:361
 msgid "The shipment item has been delivered to the recipient's mailbox."
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:143
-#: includes/class-shipment-tracking-admin.php:392
-#: includes/class-shipment-tracking-frontend.php:319
+#: includes/class-shipment-tracking-api.php:173
+#: includes/class-shipment-tracking-admin.php:442
+#: includes/class-shipment-tracking-frontend.php:360
 msgid "The shipment item has been delivered."
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:139
-#: includes/class-shipment-tracking-admin.php:388
-#: includes/class-shipment-tracking-frontend.php:315
+#: includes/class-shipment-tracking-api.php:169
+#: includes/class-shipment-tracking-admin.php:438
+#: includes/class-shipment-tracking-frontend.php:356
 msgid "The shipment item has been loaded."
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:145
-#: includes/class-shipment-tracking-admin.php:394
-#: includes/class-shipment-tracking-frontend.php:321
+#: includes/class-shipment-tracking-api.php:175
+#: includes/class-shipment-tracking-admin.php:444
+#: includes/class-shipment-tracking-frontend.php:362
 msgid "The shipment item has been routed to a service point."
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:137
-#: includes/class-shipment-tracking-admin.php:386
-#: includes/class-shipment-tracking-frontend.php:313
+#: includes/class-shipment-tracking-api.php:167
+#: includes/class-shipment-tracking-admin.php:436
+#: includes/class-shipment-tracking-frontend.php:354
 msgid "The shipment item is under transportation."
 msgstr ""
 
@@ -322,12 +396,7 @@ msgstr ""
 msgid "Thomas Audunhus"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:227
-#: includes/class-shipment-tracking-admin.php:236
-msgid "Track"
-msgstr ""
-
-#: includes/class-shipment-tracking-frontend.php:170
+#: includes/class-shipment-tracking-frontend.php:192
 msgid "Track Package"
 msgstr ""
 
@@ -335,105 +404,116 @@ msgstr ""
 msgid "Track shipments using the DirectHouse warehouse API."
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:167
+#: includes/class-shipment-tracking-frontend.php:189
 msgid "Track Your Package"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:162
+#: includes/class-shipment-tracking-admin.php:190
 msgid "Tracking"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:75
+#: includes/class-shipment-tracking-frontend.php:77
 msgid "Tracking information is not yet available for this order."
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:376
+#: includes/class-shipment-tracking-frontend.php:417
 msgid "Tracking information updated!"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:366
+#: includes/class-shipment-tracking-admin.php:416
 msgid "Tracking Link:"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:78
+#: includes/class-shipment-tracking-admin.php:80
 msgid "Tracking Number:"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:262
+#: includes/class-shipment-tracking-frontend.php:303
 msgid "Tracking Timeline"
 msgstr ""
 
-#: includes/class-shipment-tracking-cron.php:238
+#: includes/class-shipment-tracking-cron.php:375
 msgid "Tracking update completed"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:271
+#: includes/class-shipment-tracking-admin.php:311
 msgid "Tracking updated successfully!"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:482
+#: includes/class-shipment-tracking-admin.php:532
+#: includes/class-shipment-tracking-admin.php:643
 msgid "Twice Daily"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:116
-#: includes/class-shipment-tracking-admin.php:216
-#: includes/class-shipment-tracking-frontend.php:135
-#: includes/class-shipment-tracking-frontend.php:471
+#: includes/class-shipment-tracking-admin.php:119
+#: includes/class-shipment-tracking-admin.php:265
+#: includes/class-shipment-tracking-frontend.php:138
+#: includes/class-shipment-tracking-frontend.php:512
 msgid "Unknown"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:467
+#: includes/class-shipment-tracking-admin.php:517
+#: includes/class-shipment-tracking-admin.php:612
 msgid "Update Interval"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:88
+#: includes/class-shipment-tracking-admin.php:654
+msgid "Update Interval:"
+msgstr ""
+
+#: includes/class-shipment-tracking-admin.php:90
 msgid "Update Tracking"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:82
+#: includes/class-shipment-tracking-admin.php:84
 msgid "Update Tracking Number:"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:375
+#: includes/class-shipment-tracking-frontend.php:416
 msgid "Updating tracking information..."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:270
+#: includes/class-shipment-tracking-admin.php:310
 msgid "Updating..."
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:156
+#: includes/class-shipment-tracking-admin.php:632
+msgid "Use Global Interval"
+msgstr ""
+
+#: includes/class-shipment-tracking-frontend.php:178
 msgid "View detailed timeline"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:368
+#: includes/class-shipment-tracking-admin.php:418
 msgid "View on carrier website"
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:113
-#: includes/class-shipment-tracking-admin.php:213
-#: includes/class-shipment-tracking-frontend.php:132
-#: includes/class-shipment-tracking-frontend.php:468
+#: includes/class-shipment-tracking-admin.php:116
+#: includes/class-shipment-tracking-admin.php:262
+#: includes/class-shipment-tracking-frontend.php:135
+#: includes/class-shipment-tracking-frontend.php:509
 msgid "Waiting to be picked"
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:162
+#: includes/class-shipment-tracking-api.php:192
 msgid ""
 "We're currently having problems retrieving the order information associated "
 "with the tracking number."
 msgstr ""
 
-#: includes/class-shipment-tracking-admin.php:484
+#: includes/class-shipment-tracking-admin.php:534
+#: includes/class-shipment-tracking-admin.php:645
 msgid "Weekly"
 msgstr ""
 
-#: includes/class-shipment-tracking-frontend.php:168
+#: includes/class-shipment-tracking-frontend.php:190
 msgid "You can also track your package directly on the carrier's website:"
 msgstr ""
 
-#: includes/class-shipment-tracking-api.php:136
-#: includes/class-shipment-tracking-admin.php:385
-#: includes/class-shipment-tracking-frontend.php:312
+#: includes/class-shipment-tracking-api.php:166
+#: includes/class-shipment-tracking-admin.php:435
+#: includes/class-shipment-tracking-frontend.php:353
 msgid ""
 "Your order has left the warehouse and is being transported to the terminal"
 msgstr ""

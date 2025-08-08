@@ -45,6 +45,20 @@ class ShipmentTracking {
 	 */
 	private $frontend;
 
+    /**
+     * Repository instance
+     *
+     * @var ShipmentTrackingRepository
+     */
+    private $repository;
+
+    /**
+     * Order IDs scheduled for retry in current parallel run
+     *
+     * @var array<int,bool>
+     */
+    private $pendingRetryOrderIds = [];
+
 	/**
 	 * Constructor
 	 */
@@ -74,7 +88,7 @@ class ShipmentTracking {
 		// WP CLI command
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			// Determine available commands based on environment
-			$available_commands = [ 'update', 'status', 'help' ];
+            $available_commands = [ 'update', 'update-unfetched', 'schedule-unfetched', 'cleanup', 'backfill', 'status', 'help' ];
 			
 			// Only include assign-test-numbers in development environments
 			$dev_environments = [ 'local', 'dev', 'development', 'test', 'staging', 'debug' ];
@@ -84,6 +98,7 @@ class ShipmentTracking {
 				$available_commands[] = 'assign-test-numbers';
 			}
 			
+
 			\WP_CLI::add_command( 'directhouse-tracking', [ $this, 'wp_cli_command' ], [
 				'shortdesc' => 'Manage DirectHouse Ongoing Parcel Tracking',
 				'synopsis' => [
@@ -131,9 +146,27 @@ class ShipmentTracking {
 						'optional' => true,
 					],
 					[
+						'type' => 'flag',
+						'name' => 'fast-query',
+						'description' => 'Use optimized SQL queries for large datasets',
+						'optional' => true,
+					],
+					[
 						'type' => 'assoc',
 						'name' => 'file',
 						'description' => 'File path containing tracking numbers (for assign-test-numbers command)',
+						'optional' => true,
+					],
+					[
+						'type' => 'flag',
+						'name' => 'all',
+						'description' => 'Clean up ALL tracking data from all orders (for cleanup command)',
+						'optional' => true,
+					],
+					[
+						'type' => 'flag',
+						'name' => 'dry-run',
+						'description' => 'Show what would be backfilled without actually doing it',
 						'optional' => true,
 					],
 				],
@@ -148,6 +181,7 @@ class ShipmentTracking {
 	private function init_components() {
 		$this->api = new ShipmentTrackingAPI();
 		$this->cron = new ShipmentTrackingCron();
+        $this->repository = new ShipmentTrackingRepository();
 		
 		if ( is_admin() ) {
 			$this->admin = new ShipmentTrackingAdmin();
@@ -351,14 +385,23 @@ class ShipmentTracking {
 			$this->wait_for_rate_limit_reset( true );
 		}
 
-		$tracking_data = $this->api->get_tracking_data( $tracking_number );
+        $tracking_data = $this->api->get_tracking_data( $tracking_number );
 		
 		if ( is_wp_error( $tracking_data ) ) {
 			return $tracking_data;
 		}
 
-		// Use atomic update to prevent data inconsistency
-		return $this->atomic_update_order_tracking( $order, $tracking_data );
+        // Persist to dedicated table first, then sync a minimal status/meta snapshot
+        $latest_status = '';
+        if ( ! empty( $tracking_data['events'] ) ) {
+            $latest_status = $this->api->get_latest_status( $tracking_data['events'] );
+        }
+
+        // Store in repository
+        $this->repository->upsert_order_tracking( (int) $order_id, (string) $tracking_number, $tracking_data, (string) $latest_status );
+
+        // Keep meta in sync for quick UI reads that still depend on order meta
+        return $this->atomic_update_order_tracking( $order, $tracking_data );
 	}
 
 	/**
@@ -368,7 +411,7 @@ class ShipmentTracking {
 	 * @param array $tracking_data Tracking data from API
 	 * @return array|WP_Error Tracking data or error
 	 */
-	private function atomic_update_order_tracking( $order, $tracking_data ) {
+    private function atomic_update_order_tracking( $order, $tracking_data ) {
 		global $wpdb;
 		
 		// Start transaction
@@ -378,17 +421,17 @@ class ShipmentTracking {
 			// Get current time in UTC to match API timezone
 			$current_time_utc = gmdate( 'Y-m-d H:i:s' );
 			
-			// Prepare all meta data updates
+            // Prepare meta snapshot (minimal, no large blobs)
 			$meta_updates = [
-				'_ongoing_tracking_data' => $tracking_data,
 				'_ongoing_tracking_updated' => $current_time_utc,
 			];
 			
-			// Add status if events are available
-			if ( ! empty( $tracking_data['events'] ) ) {
-				$current_status = $this->api->get_latest_status( $tracking_data['events'] );
-				$meta_updates['_ongoing_tracking_status'] = $current_status;
-			}
+            // Add status if events are available
+            $current_status = '';
+            if ( ! empty( $tracking_data['events'] ) ) {
+                $current_status = $this->api->get_latest_status( $tracking_data['events'] );
+                $meta_updates['_ongoing_tracking_status'] = $current_status;
+            }
 			
 			// Update all meta data atomically
 			foreach ( $meta_updates as $meta_key => $meta_value ) {
@@ -403,8 +446,19 @@ class ShipmentTracking {
 				throw new \Exception( 'Failed to save order: save() returned false' );
 			}
 			
-			// Commit transaction
-			$wpdb->query( 'COMMIT' );
+            // Also persist the full payload to repository table for fast reads
+            $tracking_number = $order->get_meta( 'ongoing_tracking_number' );
+            if ( ! empty( $tracking_number ) ) {
+                ( new ShipmentTrackingRepository() )->upsert_order_tracking(
+                    (int) $order->get_id(),
+                    (string) $tracking_number,
+                    $tracking_data,
+                    (string) $current_status
+                );
+            }
+
+            // Commit transaction
+            $wpdb->query( 'COMMIT' );
 			
 			// Log successful update
 			error_log( sprintf( 
@@ -472,13 +526,17 @@ class ShipmentTracking {
 	 * @return array|false Tracking data or false if not found
 	 */
 	public function get_tracking_data( $order_id ) {
-		$order = wc_get_order( $order_id );
-		
-		if ( ! $order ) {
-			return false;
-		}
-
-		return $order->get_meta( '_ongoing_tracking_data' );
+        // Prefer the repository table
+        $data = $this->repository->get_tracking_by_order_id( (int) $order_id );
+        if ( $data !== false ) {
+            return $data;
+        }
+        // Fallback to meta for backward compatibility
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return false;
+        }
+        return $order->get_meta( '_ongoing_tracking_data' );
 	}
 
 	/**
@@ -488,11 +546,17 @@ class ShipmentTracking {
 	 * @return string|false Current status or false if not found
 	 */
 	public function get_tracking_status( $order_id ) {
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return false;
-		}
-		return $order->get_meta( '_ongoing_tracking_status' );
+        // Fast path via repository
+        $status = $this->repository->get_latest_status_by_order_id( (int) $order_id );
+        if ( $status ) {
+            return $status;
+        }
+        // Fallback to meta
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return false;
+        }
+        return $order->get_meta( '_ongoing_tracking_status' );
 	}
 
 	/**
@@ -584,7 +648,7 @@ class ShipmentTracking {
 	 * @param bool $quiet Whether to suppress output
 	 * @return array Array of results keyed by order ID
 	 */
-	private function process_orders_parallel( $order_ids, $quiet = false ) {
+    private function process_orders_parallel( $order_ids, $quiet = false ) {
 		$results = [];
 		$requests = [];
 		$total_retries = 0;
@@ -677,9 +741,9 @@ class ShipmentTracking {
 		}
 		
 		// Process results and classify failures
-		$failed_requests = [];
-		$retryable_errors = [];
-		$permanent_errors = [];
+        $failed_requests = [];
+        $retryable_errors = [];
+        $permanent_errors = [];
 		
 		foreach ( $curl_handles as $order_id => $ch ) {
 			$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
@@ -802,80 +866,22 @@ class ShipmentTracking {
 		
 		curl_multi_close( $multi_handle );
 		
-		// Handle permanent errors immediately
+        // Handle permanent errors immediately
 		foreach ( $permanent_errors as $order_id => $error_info ) {
 			$results[ $order_id ] = new \WP_Error( $error_info['type'], $error_info['error'] );
 			if ( ! $quiet ) {
 				\WP_CLI::warning( sprintf( 'Permanent error for order %d: %s', $order_id, $error_info['error'] ) );
 			}
 		}
-		
-		// Retry retryable errors with exponential backoff
-		$failed_requests = $retryable_errors;
-		$retry_attempt = 1;
-		
-		while ( ! empty( $failed_requests ) && $retry_attempt <= $max_retries ) {
-			$total_retries += count( $failed_requests );
-			
-			if ( ! $quiet ) {
-				\WP_CLI::log( sprintf( 'Retry attempt %d: Retrying %d failed requests...', $retry_attempt, count( $failed_requests ) ) );
-			}
-			
-			// Exponential backoff delay
-			if ( $retry_attempt > 1 ) {
-				$delay = pow( 2, $retry_attempt - 1 ); // 1, 2, 4 seconds
-				if ( ! $quiet ) {
-					\WP_CLI::log( sprintf( 'Waiting %d seconds before retry...', $delay ) );
-				}
-				sleep( $delay );
-			}
-			
-			$still_failed = [];
-			
-			foreach ( $failed_requests as $order_id => $failure_info ) {
-				$tracking_number = $failure_info['request']['tracking_number'];
-				
-				if ( ! $quiet ) {
-					\WP_CLI::log( sprintf( 'Retrying order %d (tracking: %s)...', $order_id, $tracking_number ) );
-				}
-				
-				// Retry using the sequential method
-				$retry_result = $this->update_order_tracking( $order_id );
-				
-				if ( is_wp_error( $retry_result ) ) {
-					// Check if this should be retried again
-					if ( $retry_attempt < $max_retries && $this->is_retryable_error( $retry_result ) ) {
-						$still_failed[ $order_id ] = $failure_info;
-						if ( ! $quiet ) {
-							\WP_CLI::warning( sprintf( '  - Retry %d failed for order %d: %s', $retry_attempt, $order_id, $retry_result->get_error_message() ) );
-						}
-					} else {
-						$results[ $order_id ] = $retry_result;
-						if ( ! $quiet ) {
-							\WP_CLI::warning( sprintf( '  - Final retry failed for order %d: %s', $order_id, $retry_result->get_error_message() ) );
-						}
-					}
-				} else {
-					$results[ $order_id ] = $retry_result;
-					if ( ! $quiet ) {
-						\WP_CLI::log( sprintf( '  - Retry %d successful for order %d', $retry_attempt, $order_id ) );
-					}
-				}
-			}
-			
-			$failed_requests = $still_failed;
-			$retry_attempt++;
-		}
-		
-		// Handle any remaining failed requests after max retries
-		foreach ( $failed_requests as $order_id => $failure_info ) {
-			$results[ $order_id ] = new \WP_Error( $failure_info['type'], $failure_info['error'] );
-			if ( ! $quiet ) {
-				\WP_CLI::warning( sprintf( 'Max retries reached for order %d: %s', $order_id, $failure_info['error'] ) );
-			}
-		}
-		
-		return [ 'results' => $results, 'retry_count' => $total_retries ];
+        
+        // Defer retryable errors to the caller so they can be appended to the end of the queue
+        $retryable_order_ids = array_keys( $retryable_errors );
+        
+        return [
+            'results' => $results,
+            'retry_count' => 0, // retries happen later by caller
+            'retryable' => $retryable_order_ids,
+        ];
 	}
 
 	/**
@@ -945,8 +951,8 @@ class ShipmentTracking {
 	 * @return bool True if request is allowed
 	 */
 	private function can_make_api_request( $tracking_number = '' ) {
-		$rate_limit_window = intval( get_option( 'ongoing_shipment_tracking_rate_limit_window', '60' ) ); // seconds
-		$rate_limit_max_requests = intval( get_option( 'ongoing_shipment_tracking_rate_limit_max_requests', '100' ) ); // requests per window
+		$rate_limit_window = intval( get_option( 'ongoing_shipment_tracking_rate_limit_window', '20' ) ); // seconds
+		$rate_limit_max_requests = intval( get_option( 'ongoing_shipment_tracking_rate_limit_max_requests', $rate_limit_window * 10 ) ); // requests per window
 		
 		$current_time = time();
 		$window_start = $current_time - $rate_limit_window;
@@ -1095,114 +1101,73 @@ class ShipmentTracking {
 		}
 
 		if ( ! $quiet ) {
-			\WP_CLI::log( 'Querying orders...' );
+			\WP_CLI::log( 'Querying orders with optimized query...' );
 		}
 		
-		// Use a more direct approach to get orders
-		if ( ! $quiet ) {
-			\WP_CLI::log( 'Querying orders with status filter...' );
-		}
-		
-		// Try using individual status queries
-		$all_orders = [];
-		foreach ( $enabled_statuses as $status ) {
-			$status_orders = wc_get_orders( [
-				'status' => $status,
-				'type' => 'shop_order',
-				'limit'  => -1,
-				'return' => 'ids',
-			] );
-			
-			if ( ! $quiet ) {
-				\WP_CLI::log( sprintf( '  - Status "%s": %d orders', $status, count( $status_orders ) ) );
-			}
-			
-			$all_orders = array_merge( $all_orders, $status_orders );
-		}
-		
-		// Remove duplicates
-		$all_orders = array_unique( $all_orders );
-		
-		if ( ! $quiet ) {
-			\WP_CLI::log( sprintf( 'Total unique orders with specified statuses: %d', count( $all_orders ) ) );
-		}
-		
-		if ( ! $quiet ) {
-			\WP_CLI::log( sprintf( 'Found %d orders with specified statuses', count( $all_orders ) ) );
-			
-			// Debug: Check a few orders to see their actual status
-			if ( count( $all_orders ) > 0 ) {
-				$sample_orders = array_slice( $all_orders, 0, 5 );
-				\WP_CLI::log( 'Sample orders and their statuses:' );
-				foreach ( $sample_orders as $order_id ) {
-					$order = wc_get_order( $order_id );
-					if ( $order ) {
-						\WP_CLI::log( sprintf( '  - Order %d: %s', $order_id, $order->get_status() ) );
-					}
-				}
-			}
-			
-			\WP_CLI::log( 'Filtering orders by tracking numbers and age limits...' );
-		}
-		
-		// Filter orders that actually have tracking numbers and meet age requirements
-		$orders = [];
-		$current_time = current_time( 'timestamp' );
-		$skipped_no_tracking = 0;
-		$skipped_too_old = 0;
-		
-		foreach ( $all_orders as $order_id ) {
-			$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
-			if ( empty( $tracking_number ) ) {
-				$skipped_no_tracking++;
-				continue;
-			}
+		// Build optimized meta query for tracking numbers
+		$meta_query = [
+			'relation' => 'AND',
+			[
+				'key' => 'ongoing_tracking_number',
+				'compare' => 'EXISTS',
+			],
+			[
+				'key' => 'ongoing_tracking_number',
+				'value' => '',
+				'compare' => '!=',
+			],
+		];
 
-			// Check age limit for the order's status
-			$order = wc_get_order( $order_id );
-			if ( $order ) {
-				$order_status = $order->get_status();
-				$order_date = $order->get_date_created();
-				
-				if ( $order_date && isset( $status_settings[ $order_status ] ) ) {
-					$age_limit = $status_settings[ $order_status ]['age_limit'];
-					if ( $age_limit > 0 ) {
-						$order_timestamp = $order_date->getTimestamp();
-						$order_age_days = ( $current_time - $order_timestamp ) / DAY_IN_SECONDS;
-						
-						if ( $order_age_days > $age_limit ) {
-							$skipped_too_old++;
-							continue; // Order too old for this status
-						}
-					}
-				}
-			}
-
-			$orders[] = $order_id;
-		}
-		
-		if ( ! $quiet ) {
-			\WP_CLI::log( sprintf( '  - Orders without tracking numbers: %d', $skipped_no_tracking ) );
-			\WP_CLI::log( sprintf( '  - Orders too old for their status: %d', $skipped_too_old ) );
-		}
-		
-		\WP_CLI::log( sprintf( 'Total orders with status %s: %d', implode( ', ', $enabled_statuses ), count( $all_orders ) ) );
-		\WP_CLI::log( sprintf( 'Orders with tracking numbers and within age limits: %d', count( $orders ) ) );
-
-		if ( empty( $orders ) ) {
-			if ( ! $quiet ) {
-				\WP_CLI::success( 'No orders found matching the criteria.' );
-			}
-			return [];
+		// Add exclude delivered filter if enabled
+		if ( $exclude_delivered ) {
+			$meta_query[] = [
+				'relation' => 'OR',
+				[
+					'key' => '_ongoing_tracking_status',
+					'compare' => 'NOT EXISTS',
+				],
+				[
+					'key' => '_ongoing_tracking_status',
+					'value' => 'DELIVERED',
+					'compare' => '!=',
+				],
+			];
 		}
 
-		// Apply max updates limit
-		if ( $max_updates > 0 && count( $orders ) > $max_updates ) {
-			$orders = array_slice( $orders, 0, $max_updates );
-			if ( ! $quiet ) {
-				\WP_CLI::log( sprintf( 'Limited to %d orders due to max updates setting.', $max_updates ) );
+		// Build date query for age limits
+		$date_query = [];
+		$has_age_limits = false;
+		foreach ( $status_settings as $status => $settings ) {
+			if ( $settings['age_limit'] > 0 ) {
+				$has_age_limits = true;
+				$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
+				$date_query[] = [
+					'after' => $cutoff_date,
+					'inclusive' => true,
+				];
 			}
 		}
+
+		// Use optimized query with proper limits and performance settings
+		$query_args = [
+			'status' => $enabled_statuses,
+			'limit'  => $max_updates, // Limit at query level for performance
+			'type' => 'shop_order',
+			'return' => 'ids',
+			'orderby' => 'ID',
+			'order' => 'ASC',
+			'meta_query' => $meta_query,
+			'no_found_rows' => true, // Don't count total rows for performance
+			'update_post_meta_cache' => false, // Don't cache meta for performance
+			'update_post_term_cache' => false, // Don't cache terms for performance
+		];
+
+		// Add date query if we have age limits
+		if ( $has_age_limits && ! empty( $date_query ) ) {
+			$query_args['date_query'] = $date_query;
+		}
+
+		$orders = wc_get_orders( $query_args );
 
 		if ( ! $quiet ) {
 			\WP_CLI::log( sprintf( 'Found %d orders to update. Starting update process...', count( $orders ) ) );
@@ -1244,6 +1209,22 @@ class ShipmentTracking {
 				\WP_CLI::log( 'Updating tracking for orders...' );
 				$this->wp_cli_update_tracking( $assoc_args );
 				break;
+			case 'update-unfetched':
+				\WP_CLI::log( 'Updating unfetched tracking for orders...' );
+				$this->wp_cli_update_unfetched_tracking( $assoc_args );
+				break;
+			case 'schedule-unfetched':
+				\WP_CLI::log( 'Scheduling unfetched tracking cron job...' );
+				$this->wp_cli_schedule_unfetched_cron( $assoc_args );
+				break;
+			case 'cleanup':
+				\WP_CLI::log( 'Cleaning up tracking data...' );
+				$this->wp_cli_cleanup_tracking_data( $assoc_args );
+				break;
+			case 'backfill':
+				\WP_CLI::log( 'Backfilling tracking data to repository table...' );
+				$this->wp_cli_backfill_tracking_data( $assoc_args );
+				break;
 			case 'status':
 				\WP_CLI::log( 'Checking plugin status...' );
 				$this->wp_cli_status( $assoc_args );
@@ -1257,7 +1238,7 @@ class ShipmentTracking {
 				$this->wp_cli_assign_test_numbers( $assoc_args );
 				break;
 			default:
-				\WP_CLI::error( sprintf( 'Unknown command: %s. Use "update", "status", or "assign-test-numbers" (in dev environments).', $command ) );
+				\WP_CLI::error( sprintf( 'Unknown command: %s. Use "update", "update-unfetched", "schedule-unfetched", "cleanup", "status", "backfill", or "assign-test-numbers" (in dev environments).', $command ) );
 		}
 	}
 
@@ -1277,7 +1258,11 @@ class ShipmentTracking {
 		\WP_CLI::log( '' );
 		\WP_CLI::log( 'COMMANDS:' );
 		\WP_CLI::log( '  update              Update tracking for orders' );
+		\WP_CLI::log( '  update-unfetched    Update only orders that haven\'t been fetched yet' );
+		\WP_CLI::log( '  schedule-unfetched  Schedule the unfetched tracking cron job' );
+		\WP_CLI::log( '  cleanup             Clean up tracking data from orders' );
 		\WP_CLI::log( '  status              Show plugin status and configuration' );
+		\WP_CLI::log( '  backfill            Backfill existing tracking data to repository table' );
 		
 		if ( $is_dev_environment ) {
 			\WP_CLI::log( '  assign-test-numbers Assign test tracking numbers to orders' );
@@ -1290,7 +1275,11 @@ class ShipmentTracking {
 		\WP_CLI::log( '  --include-delivered Include orders that are already delivered' );
 		\WP_CLI::log( '  --force             Force execution even if cron is disabled' );
 		\WP_CLI::log( '  --quiet             Suppress verbose output' );
-		\WP_CLI::log( '  --parallel          Use parallel processing for faster updates' );
+        \WP_CLI::log( '  --parallel          Use parallel processing for faster updates' );
+        \WP_CLI::log( '  --dry-run           Do not write changes (for backfill/cleanup); just show what would happen' );
+        \WP_CLI::log( '  --fetch-missing     When backfilling, fetch from API if no tracking payload is stored in meta' );
+        \WP_CLI::log( '  --force             Overwrite existing tracking rows in table during backfill' );
+        \WP_CLI::log( '  --fast-query        Use optimized SQL queries for large datasets' );
 		
 		if ( $is_dev_environment ) {
 			\WP_CLI::log( '  --file=<path>       File path containing tracking numbers (for assign-test-numbers)' );
@@ -1300,7 +1289,9 @@ class ShipmentTracking {
 		\WP_CLI::log( 'EXAMPLES:' );
 		\WP_CLI::log( '  wp directhouse-tracking update' );
 		\WP_CLI::log( '  wp directhouse-tracking update --statuses=processing,completed --limit=10' );
+		\WP_CLI::log( '  wp directhouse-tracking update-unfetched --parallel --limit=100' );
 		\WP_CLI::log( '  wp directhouse-tracking status' );
+		\WP_CLI::log( '  wp directhouse-tracking backfill --limit=50 --dry-run' );
 		
 		if ( $is_dev_environment ) {
 			\WP_CLI::log( '  wp directhouse-tracking assign-test-numbers --file=/path/to/numbers.txt --limit=20' );
@@ -1318,6 +1309,308 @@ class ShipmentTracking {
 	}
 
 	/**
+	 * WP CLI update unfetched tracking command
+	 *
+	 * @param array $assoc_args Command options
+	 */
+	private function wp_cli_update_unfetched_tracking( $assoc_args ) {
+		// Check if quiet mode is enabled
+		$quiet = isset( $assoc_args['quiet'] );
+		
+		// Get enabled statuses and settings using shared method
+		$status_data = $this->get_enabled_order_statuses( $assoc_args, $quiet );
+		$enabled_statuses = $status_data['statuses'];
+		$status_settings = $status_data['settings'];
+		
+		// Check if fast query is requested
+		$use_fast_query = isset( $assoc_args['fast-query'] );
+		
+		// Get unfetched orders to update using appropriate method
+		if ( $use_fast_query ) {
+			$orders = $this->get_unfetched_orders_to_update( $enabled_statuses, $status_settings, $assoc_args, $quiet );
+		} else {
+			$orders = $this->get_unfetched_orders_to_update( $enabled_statuses, $status_settings, $assoc_args, $quiet );
+		}
+		
+		if ( empty( $orders ) ) {
+			if ( ! $quiet ) {
+				\WP_CLI::success( 'No unfetched orders found matching the criteria.' );
+			}
+			return;
+		}
+
+		// Get max updates limit for parallel processing
+		$max_updates = isset( $assoc_args['limit'] ) ? intval( $assoc_args['limit'] ) : intval( get_option( 'ongoing_shipment_tracking_max_updates_per_run', '50' ) );
+
+		$updated = 0;
+		$errors = [];
+		
+		// Check if parallel processing is requested
+		$use_parallel = isset( $assoc_args['parallel'] );
+		
+		if ( $use_parallel ) {
+			\WP_CLI::log( 'Using parallel processing for faster updates...' );
+		}
+		
+		if ( $quiet ) {
+			$progress = \WP_CLI\Utils\make_progress_bar( 'Updating unfetched tracking', count( $orders ) );
+		}
+
+		if ( $use_parallel ) {
+			// Calculate initial batch size based on max updates setting
+			$batch_size = max( 5, min( 20, intval( $max_updates / 3 ) ) );
+			$min_batch_size = 3;
+			$max_batch_size = 25;
+			$reverted_to_sequential = false;
+			$start_time = time();
+			
+			if ( ! $quiet ) {
+				\WP_CLI::log( sprintf( 'Using parallel processing with initial batch size of %d orders...', $batch_size ) );
+			}
+			
+			// Process orders in batches with dynamic sizing
+			$all_results = [];
+			$remaining_orders = $orders;
+			$batch_index = 0;
+			
+			while ( ! empty( $remaining_orders ) ) {
+				// Check memory and time limits before processing batch
+				if ( $this->memory_exceeded() ) {
+					if ( ! $quiet ) {
+						\WP_CLI::warning( 'Memory limit exceeded, stopping parallel processing' );
+					}
+					break;
+				}
+				
+				if ( $this->time_exceeded( $start_time ) ) {
+					if ( ! $quiet ) {
+						\WP_CLI::warning( 'Time limit exceeded, stopping parallel processing' );
+					}
+					break;
+				}
+				
+				$batch_index++;
+				
+				// Take the current batch
+				$batch_orders = array_slice( $remaining_orders, 0, $batch_size );
+				$remaining_orders = array_slice( $remaining_orders, $batch_size );
+				
+				if ( ! $quiet ) {
+					\WP_CLI::log( sprintf( 'Processing batch %d (%d orders, batch size: %d)...', $batch_index, count( $batch_orders ), $batch_size ) );
+				}
+				
+                // Process this batch in parallel
+                $batch_result = $this->process_orders_parallel( $batch_orders, $quiet );
+                // If there are retryables, move them to the end of the remaining queue
+                if ( ! empty( $batch_result['retryable'] ) ) {
+                    if ( ! $quiet ) {
+                        \WP_CLI::log( sprintf( '  Appending %d retryable requests to the end of the queue', count( $batch_result['retryable'] ) ) );
+                    }
+                    $remaining_orders = array_merge( $remaining_orders, $batch_result['retryable'] );
+                }
+                // If there are retryables, move them to the end of the remaining queue
+                if ( ! empty( $batch_result['retryable'] ) ) {
+                    if ( ! $quiet ) {
+                        \WP_CLI::log( sprintf( '  Appending %d retryable requests to the end of the queue', count( $batch_result['retryable'] ) ) );
+                    }
+                    // Preserve order: add to tail of remaining orders
+                    $remaining_orders = array_merge( $remaining_orders, $batch_result['retryable'] );
+                }
+				
+				// Count failures in this batch (including retries)
+				$batch_failures = 0;
+                // Retries are deferred, do not count them for batch-size adjustment now
+                $batch_retries = 0;
+				
+				// Count permanent failures (after retries)
+				foreach ( $batch_result['results'] as $order_id => $result ) {
+					if ( is_wp_error( $result ) ) {
+						$batch_failures++;
+					}
+				}
+				
+				// Count retries as failures for batch size adjustment
+				$total_failures = $batch_failures + $batch_retries;
+				
+				if ( ! $quiet && $total_failures > 0 ) {
+					\WP_CLI::log( sprintf( '  Batch %d: %d permanent failures, %d retries (total: %d failures)', $batch_index, $batch_failures, $batch_retries, $total_failures ) );
+				}
+				
+				// Check if we should revert to sequential processing
+				if ( $batch_size === $min_batch_size && $total_failures > 0 && ! $reverted_to_sequential ) {
+					$reverted_to_sequential = true;
+					if ( ! $quiet ) {
+						\WP_CLI::log( '  Minimum batch size reached with failures. Reverting to sequential processing for remaining orders.' );
+					}
+					
+					// Process remaining orders sequentially
+					foreach ( $remaining_orders as $order_id ) {
+						if ( ! $quiet ) {
+							$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
+							\WP_CLI::log( sprintf( 'Sequential: Updating order %d (tracking: %s)...', $order_id, $tracking_number ) );
+						}
+						
+						$result = $this->update_order_tracking( $order_id );
+						$all_results[ $order_id ] = $result;
+						
+						if ( is_wp_error( $result ) ) {
+							$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
+							$error_msg = sprintf( 'Order %d (tracking: %s): %s', $order_id, $tracking_number, $result->get_error_message() );
+							$errors[] = $error_msg;
+							if ( ! $quiet ) {
+								\WP_CLI::warning( '  - Error: ' . $result->get_error_message() );
+							}
+						} else {
+							$updated++;
+							if ( ! $quiet ) {
+								\WP_CLI::log( '  - Success' );
+							}
+						}
+					}
+					
+					$remaining_orders = []; // Clear remaining orders since we processed them
+					break;
+				}
+				
+                // Adjust batch size only for permanent failures (not deferred retries)
+                if ( $batch_failures > 0 && $batch_size > $min_batch_size ) {
+					// Failures detected, reduce batch size
+					$old_batch_size = $batch_size;
+					$batch_size = max( $min_batch_size, intval( $batch_size * 0.8 ) );
+					
+					if ( ! $quiet && $batch_size !== $old_batch_size ) {
+						\WP_CLI::log( sprintf( '  Failures detected. Reducing batch size from %d to %d for next batch.', $old_batch_size, $batch_size ) );
+					}
+                } else if ( $total_failures === 0 ) {
+                    // No failures: keep batch size unchanged (do not increase)
+                    if ( ! $quiet ) {
+                        \WP_CLI::log( sprintf( '  No failures detected. Keeping batch size at %d for next batch.', $batch_size ) );
+                    }
+                }
+				
+				// Merge results
+                $all_results = array_merge( $all_results, $batch_result['results'] );
+			}
+			
+			$results = $all_results;
+			
+			// Process results
+			foreach ( $results as $order_id => $result ) {
+				if ( $quiet ) {
+					$progress->tick();
+				}
+				
+				if ( is_wp_error( $result ) ) {
+					$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
+					$error_msg = sprintf( 'Order %d (tracking: %s): %s', $order_id, $tracking_number, $result->get_error_message() );
+					$errors[] = $error_msg;
+					if ( ! $quiet ) {
+						\WP_CLI::warning( '  - Error: ' . $result->get_error_message() );
+					}
+				} else {
+					$updated++;
+					if ( ! $quiet ) {
+						\WP_CLI::log( sprintf( '  - Order %d: Success', $order_id ) );
+					}
+				}
+			}
+		} else {
+			// Sequential processing
+			foreach ( $orders as $order_id ) {
+				if ( $quiet ) {
+					$progress->tick();
+				} else {
+					$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
+					\WP_CLI::log( sprintf( 'Updating order %d (tracking: %s)...', $order_id, $tracking_number ) );
+				}
+				
+				$result = $this->update_order_tracking( $order_id );
+				
+				if ( is_wp_error( $result ) ) {
+					$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
+					$error_msg = sprintf( 'Order %d (tracking: %s): %s', $order_id, $tracking_number, $result->get_error_message() );
+					$errors[] = $error_msg;
+					if ( ! $quiet ) {
+						\WP_CLI::warning( '  - Error: ' . $result->get_error_message() );
+					}
+				} else {
+					$updated++;
+					if ( ! $quiet ) {
+						\WP_CLI::log( '  - Success' );
+					}
+				}
+			}
+		}
+
+		if ( $quiet ) {
+			$progress->finish();
+		}
+
+		// Display results
+		\WP_CLI::success( sprintf( 'Updated %d unfetched orders successfully.', $updated ) );
+		
+		if ( ! empty( $errors ) ) {
+			\WP_CLI::warning( sprintf( 'Encountered %d errors:', count( $errors ) ) );
+			foreach ( $errors as $error ) {
+				\WP_CLI::log( '  - ' . $error );
+			}
+		}
+	}
+
+	/**
+	 * WP CLI schedule unfetched cron command
+	 *
+	 * @param array $assoc_args Command options
+	 */
+	private function wp_cli_schedule_unfetched_cron( $assoc_args ) {
+		$scheduled = $this->cron->schedule_unfetched_cron();
+		
+		if ( $scheduled ) {
+			\WP_CLI::success( 'Unfetched tracking cron job scheduled successfully!' );
+			
+			// Show next scheduled run
+			$next_run = wp_next_scheduled( 'ongoing_shipment_tracking_unfetched_cron' );
+			if ( $next_run ) {
+				\WP_CLI::log( sprintf( 'Next run scheduled for: %s', date( 'Y-m-d H:i:s', $next_run ) ) );
+			}
+			
+			\WP_CLI::log( 'The cron job will run every 15 minutes to process orders with tracking numbers that haven\'t been fetched yet.' );
+		} else {
+			\WP_CLI::error( 'Failed to schedule unfetched tracking cron job. Make sure cron updates are enabled in plugin settings.' );
+		}
+	}
+
+	/**
+	 * WP CLI cleanup tracking data command
+	 *
+	 * @param array $assoc_args Command options
+	 */
+	private function wp_cli_cleanup_tracking_data( $assoc_args ) {
+		$limit = isset( $assoc_args['limit'] ) ? intval( $assoc_args['limit'] ) : 50;
+		$all = isset( $assoc_args['all'] );
+		$quiet = isset( $assoc_args['quiet'] );
+		
+		if ( $all ) {
+			if ( ! $quiet ) {
+				\WP_CLI::log( 'Cleaning up ALL tracking data from all orders...' );
+			}
+
+			$cleaned = $this->cleanup_all_tracking_data( $quiet );
+		} else {
+			if ( ! $quiet ) {
+				\WP_CLI::log( sprintf( 'Cleaning up tracking data from up to %d orders...', $limit ) );
+			}
+			$cleaned = $this->cleanup_tracking_data_batch( $limit, $quiet );
+		}
+		
+		if ( $cleaned > 0 ) {
+			\WP_CLI::success( sprintf( 'Cleaned up tracking data from %d orders.', $cleaned ) );
+		} else {
+			\WP_CLI::success( 'No tracking data found to clean up.' );
+		}
+	}
+
+	/**
 	 * WP CLI update tracking command
 	 *
 	 * @param array $assoc_args Command options
@@ -1331,8 +1624,15 @@ class ShipmentTracking {
 		$enabled_statuses = $status_data['statuses'];
 		$status_settings = $status_data['settings'];
 		
-		// Get orders to update using shared method
-		$orders = $this->get_orders_to_update( $enabled_statuses, $status_settings, $assoc_args, $quiet );
+		// Check if fast query is requested
+		$use_fast_query = isset( $assoc_args['fast-query'] );
+		
+		// Get orders to update using appropriate method
+		if ( $use_fast_query ) {
+			$orders = $this->get_orders_to_update_fast( $enabled_statuses, $status_settings, $assoc_args, $quiet );
+		} else {
+			$orders = $this->get_orders_to_update( $enabled_statuses, $status_settings, $assoc_args, $quiet );
+		}
 		
 		if ( empty( $orders ) ) {
 			return;
@@ -1402,7 +1702,8 @@ class ShipmentTracking {
 				
 				// Count failures in this batch (including retries)
 				$batch_failures = 0;
-				$batch_retries = $batch_result['retry_count'];
+                // Retries are deferred, do not count them now
+                $batch_retries = 0;
 				
 				// Count permanent failures (after retries)
 				foreach ( $batch_result['results'] as $order_id => $result ) {
@@ -1454,8 +1755,8 @@ class ShipmentTracking {
 					break;
 				}
 				
-				// Adjust batch size based on total failures (including retries)
-				if ( $total_failures > 0 && $batch_size > $min_batch_size ) {
+                // Adjust batch size only for permanent failures
+                if ( $batch_failures > 0 && $batch_size > $min_batch_size ) {
 					// Failures detected, reduce batch size
 					$old_batch_size = $batch_size;
 					$batch_size = max( $min_batch_size, intval( $batch_size * 0.8 ) );
@@ -1463,15 +1764,12 @@ class ShipmentTracking {
 					if ( ! $quiet && $batch_size !== $old_batch_size ) {
 						\WP_CLI::log( sprintf( '  Failures detected. Reducing batch size from %d to %d for next batch.', $old_batch_size, $batch_size ) );
 					}
-				} elseif ( $total_failures === 0 && $batch_size < $max_batch_size && ! empty( $remaining_orders ) ) {
-					// No failures, increase batch size
-					$old_batch_size = $batch_size;
-					$batch_size = min( $max_batch_size, intval( $batch_size * 1.1 ) );
-					
-					if ( ! $quiet && $batch_size !== $old_batch_size ) {
-						\WP_CLI::log( sprintf( '  No failures detected. Increasing batch size from %d to %d for next batch.', $old_batch_size, $batch_size ) );
-					}
-				}
+                } elseif ( $total_failures === 0 && ! empty( $remaining_orders ) ) {
+                    // No failures: keep batch size unchanged (do not increase)
+                    if ( ! $quiet ) {
+                        \WP_CLI::log( sprintf( '  No failures detected. Keeping batch size at %d for next batch.', $batch_size ) );
+                    }
+                }
 				
 				// Merge results
 				$all_results = array_merge( $all_results, $batch_result['results'] );
@@ -1701,7 +1999,7 @@ class ShipmentTracking {
 	 * @return bool True if time limit exceeded
 	 */
 	private function time_exceeded( $start_time ) {
-		$time_limit = apply_filters( 'ongoing_shipment_tracking_time_limit', 25 ); // 25 seconds default
+		$time_limit = apply_filters( 'ongoing_shipment_tracking_time_limit', 600 ); // 25 seconds default
 		$finish = $start_time + $time_limit;
 		
 		return time() >= $finish;
@@ -1742,5 +2040,485 @@ class ShipmentTracking {
 			size_format( $peak ), 
 			size_format( $limit ) 
 		);
+	}
+
+	/**
+	 * Get orders using ultra-fast direct SQL query for large datasets
+	 *
+	 * @param array $enabled_statuses Array of enabled statuses
+	 * @param array $status_settings Status settings with age limits
+	 * @param array $cli_overrides Optional CLI overrides
+	 * @param bool $quiet Whether to suppress output
+	 * @return array Array of order IDs to process
+	 */
+	private function get_orders_to_update_fast( $enabled_statuses, $status_settings, $cli_overrides = [], $quiet = false ) {
+		global $wpdb;
+		
+		// Get max updates limit
+		$max_updates = isset( $cli_overrides['limit'] ) ? intval( $cli_overrides['limit'] ) : intval( get_option( 'ongoing_shipment_tracking_max_updates_per_run', '50' ) );
+		
+		// Check exclude delivered setting
+		$exclude_delivered = get_option( 'ongoing_shipment_tracking_exclude_delivered', 'yes' ) === 'yes';
+		if ( isset( $cli_overrides['include-delivered'] ) ) {
+			$exclude_delivered = false;
+		}
+
+		if ( ! $quiet ) {
+			\WP_CLI::log( 'Using ultra-fast SQL query for large dataset...' );
+		}
+
+		// Build status conditions
+		$status_conditions = [];
+		foreach ( $enabled_statuses as $status ) {
+			$status_conditions[] = $wpdb->prepare( 'p.post_status = %s', 'wc-' . $status );
+		}
+		$status_where = implode( ' OR ', $status_conditions );
+
+		// Build age limit conditions
+		$age_conditions = [];
+		foreach ( $status_settings as $status => $settings ) {
+			if ( $settings['age_limit'] > 0 ) {
+				$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
+				$age_conditions[] = $wpdb->prepare( 
+					'(p.post_status = %s AND p.post_date >= %s)', 
+					'wc-' . $status, 
+					$cutoff_date 
+				);
+			}
+		}
+
+		// Build the main query
+		$sql = "
+			SELECT DISTINCT p.ID 
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_tracking ON p.ID = pm_tracking.post_id 
+				AND pm_tracking.meta_key = 'ongoing_tracking_number' 
+				AND pm_tracking.meta_value != ''
+		";
+
+		// Add exclude delivered condition
+		if ( $exclude_delivered ) {
+			$sql .= "
+				LEFT JOIN {$wpdb->postmeta} pm_status ON p.ID = pm_status.post_id 
+					AND pm_status.meta_key = '_ongoing_tracking_status'
+			";
+		}
+
+		$sql .= " WHERE p.post_type = 'shop_order' AND ({$status_where})";
+
+		// Add age limit conditions if any
+		if ( ! empty( $age_conditions ) ) {
+			$sql .= " AND (" . implode( ' OR ', $age_conditions ) . ")";
+		}
+
+		// Add exclude delivered condition
+		if ( $exclude_delivered ) {
+			$sql .= " AND (pm_status.meta_value IS NULL OR pm_status.meta_value != 'DELIVERED')";
+		}
+
+		$sql .= " ORDER BY p.ID ASC LIMIT %d";
+
+		$sql = $wpdb->prepare( $sql, $max_updates );
+
+		// Execute query
+		$orders = $wpdb->get_col( $sql );
+
+		if ( ! $quiet ) {
+			\WP_CLI::log( sprintf( 'Found %d orders to update using fast SQL query.', count( $orders ) ) );
+		}
+
+		return $orders;
+	}
+
+	/**
+	 * Get orders that have tracking numbers but haven't been fetched yet
+	 *
+	 * @param array $enabled_statuses Array of enabled statuses
+	 * @param array $status_settings Status settings with age limits
+	 * @param array $cli_overrides Optional CLI overrides
+	 * @param bool $quiet Whether to suppress output
+	 * @return array Array of order IDs to process
+	 */
+	private function get_unfetched_orders_to_update( $enabled_statuses, $status_settings, $cli_overrides = [], $quiet = false ) {
+		global $wpdb;
+		
+		// Get max updates limit
+		$max_updates = isset( $cli_overrides['limit'] ) ? intval( $cli_overrides['limit'] ) : intval( get_option( 'ongoing_shipment_tracking_max_updates_per_run', '50' ) );
+		
+		// Check exclude delivered setting
+		$exclude_delivered = get_option( 'ongoing_shipment_tracking_exclude_delivered', 'yes' ) === 'yes';
+		if ( isset( $cli_overrides['include-delivered'] ) ) {
+			$exclude_delivered = false;
+		}
+
+		if ( ! $quiet ) {
+			\WP_CLI::log( 'Finding orders with tracking numbers that haven\'t been fetched yet...' );
+		}
+
+		// Build status conditions
+		$status_conditions = [];
+		foreach ( $enabled_statuses as $status ) {
+			$status_conditions[] = $wpdb->prepare( 'p.post_status = %s', 'wc-' . $status );
+		}
+		$status_where = implode( ' OR ', $status_conditions );
+
+		// Build age limit conditions
+		$age_conditions = [];
+		foreach ( $status_settings as $status => $settings ) {
+			if ( $settings['age_limit'] > 0 ) {
+				$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
+				$age_conditions[] = $wpdb->prepare( 
+					'(p.post_status = %s AND p.post_date >= %s)', 
+					'wc-' . $status, 
+					$cutoff_date 
+				);
+			}
+		}
+
+		// Build the main query - only orders with tracking numbers but no tracking data
+		$sql = "
+			SELECT DISTINCT p.ID 
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_tracking ON p.ID = pm_tracking.post_id 
+				AND pm_tracking.meta_key = 'ongoing_tracking_number' 
+				AND pm_tracking.meta_value != ''
+			LEFT JOIN {$wpdb->postmeta} pm_data ON p.ID = pm_data.post_id 
+				AND pm_data.meta_key = '_ongoing_tracking_data'
+		";
+
+		// Add exclude delivered condition
+		if ( $exclude_delivered ) {
+			$sql .= "
+				LEFT JOIN {$wpdb->postmeta} pm_status ON p.ID = pm_status.post_id 
+					AND pm_status.meta_key = '_ongoing_tracking_status'
+			";
+		}
+
+		$sql .= " WHERE p.post_type = 'shop_order' AND ({$status_where})";
+
+		// Add age limit conditions if any
+		if ( ! empty( $age_conditions ) ) {
+			$sql .= " AND (" . implode( ' OR ', $age_conditions ) . ")";
+		}
+
+		// Add condition to only get orders that haven't been fetched yet
+		$sql .= " AND pm_data.meta_value IS NULL";
+
+		// Add exclude delivered condition
+		if ( $exclude_delivered ) {
+			$sql .= " AND (pm_status.meta_value IS NULL OR pm_status.meta_value != 'DELIVERED')";
+		}
+
+		$sql .= " ORDER BY p.ID ASC LIMIT %d";
+
+		$sql = $wpdb->prepare( $sql, $max_updates );
+
+		// Execute query
+		$orders = $wpdb->get_col( $sql );
+
+		if ( ! $quiet ) {
+			\WP_CLI::log( sprintf( 'Found %d unfetched orders to update.', count( $orders ) ) );
+		}
+
+		return $orders;
+	}
+
+	/**
+	 * Clean up tracking data from a batch of orders
+	 *
+	 * @param int $limit Maximum number of orders to process
+	 * @param bool $quiet Whether to suppress output
+	 * @return int Number of orders cleaned
+	 */
+	private function cleanup_tracking_data_batch( $limit = 50, $quiet = false ) {
+		global $wpdb;
+		
+		// Get orders that have tracking data
+		$sql = $wpdb->prepare( "
+			SELECT DISTINCT p.ID 
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_data ON p.ID = pm_data.post_id 
+				AND pm_data.meta_key = '_ongoing_tracking_data'
+			WHERE p.post_type = 'shop_order'
+			ORDER BY p.ID ASC 
+			LIMIT %d
+		", $limit );
+		
+		$order_ids = $wpdb->get_col( $sql );
+		
+		if ( empty( $order_ids ) ) {
+			return 0;
+		}
+		
+		$cleaned = 0;
+		
+		foreach ( $order_ids as $order_id ) {
+			$result = $this->cleanup_order_tracking_data( $order_id );
+			if ( $result ) {
+				$cleaned++;
+				if ( ! $quiet ) {
+					\WP_CLI::log( sprintf( 'Cleaned tracking data from order %d', $order_id ) );
+				}
+			}
+		}
+		
+		return $cleaned;
+	}
+
+	/**
+	 * Clean up ALL tracking data from all orders (for uninstall)
+	 *
+	 * @param bool $quiet Whether to suppress output
+	 * @return int Number of orders cleaned
+	 */
+	private function cleanup_all_tracking_data( $quiet = false ) {
+		global $wpdb;
+		
+		if ( ! $quiet ) {
+			\WP_CLI::log( 'Removing all tracking data from database...' );
+		}
+		
+		// Delete all tracking-related meta data in batches
+		$meta_keys = [
+			'_ongoing_tracking_data',
+			'_ongoing_tracking_status', 
+			'_ongoing_tracking_updated',
+			'ongoing_tracking_number'
+		];
+		
+		$total_deleted = 0;
+		
+		foreach ( $meta_keys as $meta_key ) {
+			$deleted = $wpdb->delete(
+				$wpdb->postmeta,
+				[ 'meta_key' => $meta_key ],
+				[ '%s' ]
+			);
+			
+			if ( $deleted !== false ) {
+				$total_deleted += $deleted;
+				if ( ! $quiet ) {
+					\WP_CLI::log( sprintf( 'Deleted %d records with meta key: %s', $deleted, $meta_key ) );
+				}
+			}
+		}
+		
+		// Clean up plugin options
+		$options_to_delete = [
+			'ongoing_shipment_tracking_enable_cron',
+			'ongoing_shipment_tracking_cron_interval',
+			'ongoing_shipment_tracking_unfetched_cron_interval',
+			'ongoing_shipment_tracking_max_updates_per_run',
+			'ongoing_shipment_tracking_batch_size',
+			'ongoing_shipment_tracking_exclude_delivered',
+			'ongoing_shipment_tracking_last_cron_run',
+			'ongoing_shipment_tracking_last_unfetched_cron_run',
+		];
+		
+		// Add status-specific options
+		$order_statuses = wc_get_order_statuses();
+		foreach ( $order_statuses as $status_key => $status_label ) {
+			$options_to_delete[] = 'ongoing_shipment_tracking_status_' . $status_key;
+		}
+		
+		foreach ( $options_to_delete as $option ) {
+			delete_option( $option );
+		}
+		
+		if ( ! $quiet ) {
+			\WP_CLI::log( sprintf( 'Total tracking data records deleted: %d', $total_deleted ) );
+		}
+		
+		return $total_deleted;
+	}
+
+	/**
+	 * Clean up tracking data from a single order
+	 *
+	 * @param int $order_id Order ID
+	 * @return bool Success status
+	 */
+	private function cleanup_order_tracking_data( $order_id ) {
+		$order = wc_get_order( $order_id );
+		
+		if ( ! $order ) {
+			return false;
+		}
+		
+		// Remove tracking-related meta data
+		$order->delete_meta_data( '_ongoing_tracking_data' );
+		$order->delete_meta_data( '_ongoing_tracking_status' );
+		$order->delete_meta_data( '_ongoing_tracking_updated' );
+		
+		// Note: We keep the tracking number as it might be user-provided
+		// $order->delete_meta_data( 'ongoing_tracking_number' );
+		
+		$order->save();
+		
+		return true;
+	}
+
+	/**
+	 * Plugin uninstall cleanup - called when plugin is uninstalled
+	 */
+	public static function uninstall_cleanup() {
+		global $wpdb;
+		
+		// Clear scheduled cron jobs
+		wp_clear_scheduled_hook( 'ongoing_shipment_tracking_cron' );
+		wp_clear_scheduled_hook( 'ongoing_shipment_tracking_unfetched_cron' );
+		
+		// Delete all tracking-related meta data
+		$meta_keys = [
+			'_ongoing_tracking_data',
+			'_ongoing_tracking_status', 
+			'_ongoing_tracking_updated',
+			'ongoing_tracking_number'
+		];
+		
+		foreach ( $meta_keys as $meta_key ) {
+			$wpdb->delete(
+				$wpdb->postmeta,
+				[ 'meta_key' => $meta_key ],
+				[ '%s' ]
+			);
+		}
+		
+		// Clean up plugin options
+		$options_to_delete = [
+			'ongoing_shipment_tracking_enable_cron',
+			'ongoing_shipment_tracking_cron_interval',
+			'ongoing_shipment_tracking_unfetched_cron_interval',
+			'ongoing_shipment_tracking_max_updates_per_run',
+			'ongoing_shipment_tracking_batch_size',
+			'ongoing_shipment_tracking_exclude_delivered',
+			'ongoing_shipment_tracking_last_cron_run',
+			'ongoing_shipment_tracking_last_unfetched_cron_run',
+		];
+		
+		// Add status-specific options
+		$order_statuses = wc_get_order_statuses();
+		foreach ( $order_statuses as $status_key => $status_label ) {
+			$options_to_delete[] = 'ongoing_shipment_tracking_status_' . $status_key;
+		}
+		
+		foreach ( $options_to_delete as $option ) {
+			delete_option( $option );
+		}
+	}
+
+	/**
+	 * WP CLI backfill tracking data command
+	 *
+	 * @param array $assoc_args Command options
+	 */
+	private function wp_cli_backfill_tracking_data( $assoc_args ) {
+		$limit = isset( $assoc_args['limit'] ) ? intval( $assoc_args['limit'] ) : 50;
+		$dry_run = isset( $assoc_args['dry-run'] );
+		$quiet = isset( $assoc_args['quiet'] );
+
+		if ( ! $quiet ) {
+			\WP_CLI::log( sprintf( 'Backfilling tracking data to repository table (limit: %d, dry-run: %s)...', $limit, $dry_run ? 'yes' : 'no' ) );
+		}
+
+		// Ensure repository table exists
+		ShipmentTrackingRepository::ensure_installed();
+
+		// Get orders that have tracking data in meta but not in repository
+		global $wpdb;
+		$table = ShipmentTrackingRepository::table_name();
+
+		$sql = $wpdb->prepare( "
+			SELECT DISTINCT p.ID, p.post_status
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_tracking ON p.ID = pm_tracking.post_id
+				AND pm_tracking.meta_key = 'ongoing_tracking_number'
+				AND pm_tracking.meta_value != ''
+			INNER JOIN {$wpdb->postmeta} pm_data ON p.ID = pm_data.post_id
+				AND pm_data.meta_key = '_ongoing_tracking_data'
+				AND pm_data.meta_value != ''
+			LEFT JOIN {$table} t ON t.order_id = p.ID
+			WHERE p.post_type = 'shop_order'
+				AND t.order_id IS NULL
+			ORDER BY p.ID ASC
+			LIMIT %d
+		", $limit );
+
+		$orders = $wpdb->get_results( $sql );
+
+		if ( empty( $orders ) ) {
+			if ( ! $quiet ) {
+				\WP_CLI::success( 'No orders found with tracking data in meta that needs backfilling.' );
+			}
+			return;
+		}
+
+		if ( ! $quiet ) {
+			\WP_CLI::log( sprintf( 'Found %d orders to backfill.', count( $orders ) ) );
+		}
+
+		$backfilled = 0;
+		$errors = [];
+		$progress = $quiet ? null : \WP_CLI\Utils\make_progress_bar( 'Backfilling tracking data', count( $orders ) );
+
+		foreach ( $orders as $order_info ) {
+			$order_id = (int) $order_info->ID;
+			$order = wc_get_order( $order_id );
+
+			if ( ! $order ) {
+				$errors[] = sprintf( 'Order %d not found', $order_id );
+				continue;
+			}
+
+			$tracking_number = $order->get_meta( 'ongoing_tracking_number' );
+			$tracking_data = $order->get_meta( '_ongoing_tracking_data' );
+			$latest_status = $order->get_meta( '_ongoing_tracking_status' );
+
+			if ( empty( $tracking_data ) ) {
+				$errors[] = sprintf( 'Order %d has no tracking data in meta', $order_id );
+				continue;
+			}
+
+			if ( $dry_run ) {
+				if ( ! $quiet ) {
+					\WP_CLI::log( sprintf( '  Would backfill order %d (tracking: %s, status: %s)', $order_id, $tracking_number, $latest_status ?: 'unknown' ) );
+				}
+				$backfilled++;
+			} else {
+				// Backfill to repository
+				$success = $this->repository->upsert_order_tracking( $order_id, $tracking_number, $tracking_data, $latest_status );
+
+				if ( $success ) {
+					$backfilled++;
+					if ( ! $quiet ) {
+						\WP_CLI::log( sprintf( '  Backfilled order %d (tracking: %s, status: %s)', $order_id, $tracking_number, $latest_status ?: 'unknown' ) );
+					}
+				} else {
+					$errors[] = sprintf( 'Failed to backfill order %d', $order_id );
+				}
+			}
+
+			if ( $progress ) {
+				$progress->tick();
+			}
+		}
+
+		if ( $progress ) {
+			$progress->finish();
+		}
+
+		// Display results
+		if ( $dry_run ) {
+			\WP_CLI::success( sprintf( 'Would backfill %d orders (dry run).', $backfilled ) );
+		} else {
+			\WP_CLI::success( sprintf( 'Successfully backfilled %d orders.', $backfilled ) );
+		}
+
+		if ( ! empty( $errors ) ) {
+			\WP_CLI::warning( sprintf( 'Encountered %d errors:', count( $errors ) ) );
+			foreach ( $errors as $error ) {
+				\WP_CLI::log( '  - ' . $error );
+			}
+		}
 	}
 }

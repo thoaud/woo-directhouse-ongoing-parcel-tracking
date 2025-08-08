@@ -3,10 +3,10 @@ msgstr ""
 "Project-Id-Version: Ongoing Shipment Tracking\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-08-06 17:47+0000\n"
-"PO-Revision-Date: 2025-08-08 01:34+0000\n"
+"PO-Revision-Date: 2025-08-08 01:33+0000\n"
 "Last-Translator: \n"
-"Language-Team: Swedish\n"
-"Language: sv_SE\n"
+"Language-Team: Norwegian (Bokmål)\n"
+"Language: nb_NO\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -19,42 +19,43 @@ msgstr ""
 #: includes/class-shipment-tracking-admin.php:437
 #: includes/class-shipment-tracking-frontend.php:355
 msgid "A text message notification has been delivered to the recipient."
-msgstr "Ett textmeddelande har levererats till mottagaren."
+msgstr "En tekstmelding har blitt levert til mottakeren."
 
 #: includes/class-shipment-tracking-admin.php:653
 msgid "Age Limit:"
-msgstr "Åldersgräns:"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:101
 msgid "All Tracking Events"
-msgstr "Alla spårningsevenemang"
+msgstr "Alle sporingshendelser"
 
 #: includes/class-shipment-tracking-admin.php:113
 #: includes/class-shipment-tracking-admin.php:260
 #: includes/class-shipment-tracking-frontend.php:132
 #: includes/class-shipment-tracking-frontend.php:507
 msgid "Available for pickup"
-msgstr "Tillgänglig för upphämtning"
+msgstr "Tilgjengelig for henting"
 
 #: includes/class-shipment-tracking-admin.php:117
 #: includes/class-shipment-tracking-admin.php:263
 #: includes/class-shipment-tracking-frontend.php:136
 #: includes/class-shipment-tracking-frontend.php:510
 msgid "Being picked"
-msgstr "Blir upphämtad"
+msgstr "Blir plukket"
 
 #: includes/class-shipment-tracking-admin.php:506
 msgid "Configure automatic tracking updates and order status filtering."
 msgstr ""
-"Konfigurera automatiska spårningsuppdateringar och filtrering av orderstatus."
+"Konfigurer automatiske sporingsoppdateringer og filtrering av "
+"bestillingsstatus."
 
 #: includes/class-shipment-tracking-frontend.php:121
 msgid "Current Status"
-msgstr "Aktuell status"
+msgstr "Nåværende status"
 
 #: includes/class-shipment-tracking-frontend.php:243
 msgid "Customer Details"
-msgstr "Kunddetaljer"
+msgstr "Kundens detaljer"
 
 #: includes/class-shipment-tracking-admin.php:533
 #: includes/class-shipment-tracking-admin.php:644
@@ -63,151 +64,145 @@ msgstr "Daglig"
 
 #: includes/class-shipment-tracking-admin.php:629
 msgid "days (0 = no limit)"
-msgstr "dagar (0 = ingen gräns)"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:112
 #: includes/class-shipment-tracking-admin.php:259
 #: includes/class-shipment-tracking-frontend.php:131
 #: includes/class-shipment-tracking-frontend.php:506
 msgid "Delivered"
-msgstr "Levererad"
+msgstr "Levert"
 
 #: includes/class-shipment-tracking-frontend.php:74
 msgid "Delivery Tracking"
-msgstr "Leveransspårning"
+msgstr "Leveringssporing"
 
 #. Name of the plugin
 #: includes/class-shipment-tracking-admin.php:485
 #: includes/class-shipment-tracking-admin.php:504
 msgid "DirectHouse Ongoing Parcel Tracking"
-msgstr "DirectHouse pågående paketspårning"
+msgstr ""
 
 #: woo-directhouse-ongoing-parcel-tracking.php:30
 msgid ""
 "DirectHouse Ongoing Parcel Tracking requires WooCommerce to be installed and "
 "activated."
 msgstr ""
-"DirectHouse pågående paketspårning kräver att WooCommerce är installerat och "
-"aktiverat."
 
 #: includes/class-shipment-tracking-admin.php:512
 msgid "Enable automatic tracking updates via cron job"
-msgstr "Aktivera automatiska spårningsuppdateringar via cron-jobb"
+msgstr "Aktiver automatiske sporingsoppdateringer via cron-jobb"
 
 #: includes/class-shipment-tracking-admin.php:510
 msgid "Enable Cron Updates"
-msgstr "Aktivera Cron-uppdateringar"
+msgstr "Aktiver Cron-oppdateringer"
 
 #: includes/class-shipment-tracking-admin.php:553
 msgid "Enable Status Emojis"
-msgstr "Aktivera status-emojis"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:548
 msgid ""
 "Enable the tracking status column in the orders list table. Disable this if "
 "the orders list becomes slow."
 msgstr ""
-"Aktivera spårningsstatuskolumnen i orderlistan. Inaktivera detta om "
-"orderlistan blir långsam."
 
 #: includes/class-shipment-tracking-admin.php:546
 msgid "Enable Tracking Column"
-msgstr "Aktivera spårningskolumn"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:610
 msgid "Enable Updates"
-msgstr "Aktivera uppdateringar"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:86
 msgid "Enter the tracking number from the warehouse system."
-msgstr "Ange spårningsnumret från lagersystemet."
+msgstr "Skriv inn sporingsnummeret fra lagersystemet."
 
 #: includes/class-shipment-tracking-frontend.php:418
 msgid "Error updating tracking information."
-msgstr "Fel vid uppdatering av spårningsinformation."
+msgstr "Feil ved oppdatering av sporingsinformasjon."
 
 #: includes/class-shipment-tracking-admin.php:312
 msgid "Error updating tracking."
-msgstr "Fel vid uppdatering av spårning."
+msgstr "Feil ved oppdatering av sporing."
 
 #: includes/class-shipment-tracking-cron.php:81
 #: includes/class-shipment-tracking-admin.php:531
 #: includes/class-shipment-tracking-admin.php:642
 msgid "Every 12 Hours"
-msgstr "Varje 12 timmar"
+msgstr "Hver 12. time"
 
 #: includes/class-shipment-tracking-cron.php:41
 #: includes/class-shipment-tracking-admin.php:522
 #: includes/class-shipment-tracking-admin.php:633
 msgid "Every 15 Minutes"
-msgstr "Varje 15 minuter"
+msgstr "Hver 15. minutt"
 
 #: includes/class-shipment-tracking-cron.php:56
 #: includes/class-shipment-tracking-admin.php:526
 #: includes/class-shipment-tracking-admin.php:637
 msgid "Every 2 Hours"
-msgstr "Varje 2 timmar"
+msgstr "Hver 2. time"
 
 #: includes/class-shipment-tracking-cron.php:61
 #: includes/class-shipment-tracking-admin.php:527
 #: includes/class-shipment-tracking-admin.php:638
 msgid "Every 3 Hours"
-msgstr "Varje 3 timmar"
+msgstr "Hver 3. time"
 
 #: includes/class-shipment-tracking-cron.php:46
 #: includes/class-shipment-tracking-admin.php:523
 #: includes/class-shipment-tracking-admin.php:634
 msgid "Every 30 Minutes"
-msgstr "Varje 30 minuter"
+msgstr "Hver 30. minutt"
 
 #: includes/class-shipment-tracking-cron.php:66
 #: includes/class-shipment-tracking-admin.php:528
 #: includes/class-shipment-tracking-admin.php:639
 msgid "Every 4 Hours"
-msgstr "Varje 4 timmar"
+msgstr "Hver 4. time"
 
 #: includes/class-shipment-tracking-cron.php:51
 #: includes/class-shipment-tracking-admin.php:524
 #: includes/class-shipment-tracking-admin.php:635
 msgid "Every 45 Minutes"
-msgstr "Varje 45 minuter"
+msgstr "Hver 45. minutt"
 
 #: includes/class-shipment-tracking-cron.php:71
 #: includes/class-shipment-tracking-admin.php:529
 #: includes/class-shipment-tracking-admin.php:640
 msgid "Every 6 Hours"
-msgstr "Varje 6 timmar"
+msgstr "Hver 6. time"
 
 #: includes/class-shipment-tracking-cron.php:76
 #: includes/class-shipment-tracking-admin.php:530
 #: includes/class-shipment-tracking-admin.php:641
 msgid "Every 8 Hours"
-msgstr "Varje 8 timmar"
+msgstr "Hver 8. time"
 
 #: includes/class-shipment-tracking-cron.php:86
 msgid "Every Hour"
-msgstr "Varje timme"
+msgstr "Hver time"
 
 #: includes/class-shipment-tracking-admin.php:539
 msgid "Exclude Delivered Orders"
-msgstr "Exkludera levererade beställningar"
+msgstr "Ekskluder leverte bestillinger"
 
 #: includes/class-shipment-tracking-admin.php:525
 #: includes/class-shipment-tracking-admin.php:636
 msgid "Hourly"
-msgstr "Timvis"
+msgstr "Hver time"
 
 #: includes/class-shipment-tracking-admin.php:654
 msgid ""
 "How often to update orders with this status. \"Use Global Interval\" uses "
 "the main cron interval setting."
 msgstr ""
-"Hur ofta ska beställningar med denna status uppdateras. \"Använd globalt "
-"intervall\" använder huvudinställningen för cron-intervall."
 
 #: includes/class-shipment-tracking-admin.php:519
 msgid "How often to update tracking information"
-msgstr "Hur ofta ska spårningsinformation uppdateras"
+msgstr "Hvor ofte skal sporingsinformasjonen oppdateres?"
 
 #. URI of the plugin
 msgid "https://www.comfyballs.no"
@@ -218,30 +213,28 @@ msgstr "https://www.comfyballs.no"
 #: includes/class-shipment-tracking-frontend.php:133
 #: includes/class-shipment-tracking-frontend.php:508
 msgid "In transit"
-msgstr "I transit"
+msgstr "Under transport"
 
 #: includes/class-shipment-tracking-admin.php:65
 msgid "Invalid order."
-msgstr "Ogiltig beställning."
+msgstr "Ugyldig bestilling."
 
 #: includes/class-shipment-tracking-admin.php:95
 #: includes/class-shipment-tracking-frontend.php:126
 msgid "Last updated:"
-msgstr "Senast uppdaterad:"
+msgstr "Sist oppdatert:"
 
 #: includes/class-shipment-tracking-admin.php:611
 msgid "Max Age (days)"
-msgstr "Max ålder (dagar)"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:560
 msgid "Max Updates Per Run"
-msgstr "Max uppdateringar per körning"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:562
 msgid "Maximum number of orders to update per cron run. Set to 0 for no limit."
 msgstr ""
-"Maximalt antal beställningar att uppdatera per cron-körning. Sätt till 0 för "
-"ingen gräns."
 
 #: includes/class-shipment-tracking-admin.php:277
 #: includes/class-shipment-tracking-frontend.php:520
@@ -256,156 +249,155 @@ msgid ""
 "separate app, you may be notified there, or via SMS or email when the parcel "
 "is delivered."
 msgstr ""
-"Ingen ytterligare spårningsinformation är tillgänglig. Om transportören har "
-"en separat app kan du bli meddelad där, eller via SMS eller e-post när "
-"paketet har levererats."
+"Ingen ytterligere sporingsinformasjon er tilgjengelig. Hvis transportøren "
+"har en egen app, kan du bli varslet der, eller via SMS eller e-post når "
+"pakken er levert."
 
 #: includes/class-shipment-tracking-admin.php:238
 #: includes/class-shipment-tracking-frontend.php:500
 msgid "No tracking"
-msgstr "Ingen spårning"
+msgstr "Ingen sporing"
 
 #: includes/class-shipment-tracking-frontend.php:97
 msgid "No tracking information available yet. Please check back later."
 msgstr ""
-"Ingen spårningsinformation tillgänglig än. Vänligen kolla tillbaka senare."
+"Ingen sporingsinformasjon tilgjengelig ennå. Vennligst sjekk tilbake senere."
 
 #: includes/class-shipment-tracking-admin.php:161
 msgid "No tracking information available."
-msgstr "Ingen spårningsinformation tillgänglig."
+msgstr "Ingen sporingsinformasjon tilgjengelig."
 
 #: includes/class-shipment-tracking-admin.php:78
 msgid "No tracking number available for this order."
-msgstr "Ingen spårningsnummer tillgänglig för denna beställning."
+msgstr "Ingen sporingsnummer tilgjengelig for denne bestillingen."
 
 #: includes/class-shipment-tracking-admin.php:653
 msgid "Only update orders newer than this many days. Set to 0 for no limit."
 msgstr ""
-"Uppdatera endast beställningar som är nyare än detta antal dagar. Sätt till "
-"0 för ingen gräns."
 
 #: includes/class-shipment-tracking-cron.php:208
 #: includes/class-shipment-tracking-cron.php:345
 msgid "Order delivered according to tracking information."
-msgstr "Beställning levererad enligt spårningsinformation."
+msgstr "Bestilling levert i henhold til sporingsinformasjon."
 
 #: includes/class-shipment-tracking-frontend.php:221
 msgid "Order details"
-msgstr "Beställningsdetaljer"
+msgstr "Bestillingsdetaljer"
 
 #: includes/class-shipment-tracking-api.php:165
 #: includes/class-shipment-tracking-admin.php:434
 #: includes/class-shipment-tracking-frontend.php:352
 msgid ""
 "Order has been picked and is ready for further processing in the warehouse"
-msgstr "Beställningen har plockats och är redo för vidare behandling i lagret."
+msgstr ""
+"Bestillingen har blitt plukket og er klar for videre behandling på lageret."
 
 #: includes/class-shipment-tracking-api.php:164
 #: includes/class-shipment-tracking-admin.php:433
 #: includes/class-shipment-tracking-frontend.php:351
 msgid "Order has been placed in the warehouse and will be prepared for picking"
 msgstr ""
-"Beställningen har placerats i lagret och kommer att förberedas för plockning."
+"Bestillingen har blitt plassert på lageret og vil bli klargjort for plukking."
 
 #: includes/class-shipment-tracking-admin.php:609
 msgid "Order Status"
-msgstr "Beställningsstatus"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:571
 msgid "Order Status Settings"
-msgstr "Inställningar för beställningsstatus"
+msgstr "Innstillinger for bestillingsstatus"
 
 #: includes/class-shipment-tracking-admin.php:577
 msgid "Order Statuses"
-msgstr "Beställningsstatusar"
+msgstr "Bestillingsstatusar"
 
 #: includes/class-shipment-tracking-admin.php:118
 #: includes/class-shipment-tracking-admin.php:264
 msgid "Other"
-msgstr "Annat"
+msgstr "Annet"
 
 #: includes/class-shipment-tracking-frontend.php:137
 #: includes/class-shipment-tracking-frontend.php:511
 msgid "Processing"
-msgstr "Bearbetar"
+msgstr "Behandler"
 
 #: includes/class-shipment-tracking-frontend.php:170
 msgid "Refresh tracking information"
-msgstr "Uppdatera spårningsinformation"
+msgstr "Oppdater sporingsinformasjon"
 
 #: includes/class-shipment-tracking-admin.php:573
 #: includes/class-shipment-tracking-admin.php:579
 msgid "Select which order statuses should be automatically updated."
-msgstr "Välj vilka beställningsstatusar som ska uppdateras automatiskt."
+msgstr "Velg hvilke bestillingsstatusar som skal oppdateres automatisk."
 
 #: includes/class-shipment-tracking-admin.php:115
 #: includes/class-shipment-tracking-frontend.php:134
 msgid "Sent"
-msgstr "Skickad"
+msgstr ""
 
 #: includes/class-shipment-tracking-frontend.php:483
 msgid "Shipment Status"
-msgstr "Fraktstatus"
+msgstr "Ordre og pakkesporing"
 
 #: includes/class-shipment-tracking-admin.php:48
 msgid "Shipment Tracking"
-msgstr "Fraktspårning"
+msgstr "Ordre og Pakkesporing"
 
 #: includes/class-shipment-tracking-admin.php:555
 msgid "Show emojis next to statuses in admin and customer views."
-msgstr "Visa emojis bredvid statusar i admin- och kundvyer."
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:541
 msgid "Skip orders that are already marked as delivered"
-msgstr "Hoppa över beställningar som redan är markerade som levererade."
+msgstr "Hopp over bestillinger som allerede er merket som levert"
 
 #: includes/class-shipment-tracking-api.php:172
 #: includes/class-shipment-tracking-admin.php:441
 #: includes/class-shipment-tracking-frontend.php:359
 msgid "The delivery of the shipment item is in progress."
-msgstr "Leveransen av försändelsen är pågående."
+msgstr "Leveringen av pakken er i gang."
 
 #: includes/class-shipment-tracking-api.php:171
 #: includes/class-shipment-tracking-admin.php:440
 #: includes/class-shipment-tracking-frontend.php:358
 msgid "The shipment item has arrived at the distribution terminal."
-msgstr "Försändelsen har anlänt till distributionscentralen."
+msgstr "Pakken har ankommet distribusjonsterminalen."
 
 #: includes/class-shipment-tracking-api.php:170
 #: includes/class-shipment-tracking-admin.php:439
 #: includes/class-shipment-tracking-frontend.php:357
 msgid "The shipment item has been delivered to a service point."
-msgstr "Försändelsen har levererats till en servicepunkt."
+msgstr "Pakken har blitt levert til et servicested."
 
 #: includes/class-shipment-tracking-api.php:174
 #: includes/class-shipment-tracking-admin.php:443
 #: includes/class-shipment-tracking-frontend.php:361
 msgid "The shipment item has been delivered to the recipient's mailbox."
-msgstr "Försändelsen har levererats till mottagarens brevlåda."
+msgstr "Pakken har blitt levert til mottakerens postkasse."
 
 #: includes/class-shipment-tracking-api.php:173
 #: includes/class-shipment-tracking-admin.php:442
 #: includes/class-shipment-tracking-frontend.php:360
 msgid "The shipment item has been delivered."
-msgstr "Försändelsen har levererats."
+msgstr "Pakken har blitt levert."
 
 #: includes/class-shipment-tracking-api.php:169
 #: includes/class-shipment-tracking-admin.php:438
 #: includes/class-shipment-tracking-frontend.php:356
 msgid "The shipment item has been loaded."
-msgstr "Försändelsen har lastats."
+msgstr "Pakken har blitt lastet."
 
 #: includes/class-shipment-tracking-api.php:175
 #: includes/class-shipment-tracking-admin.php:444
 #: includes/class-shipment-tracking-frontend.php:362
 msgid "The shipment item has been routed to a service point."
-msgstr "Fraktobjektet har dirigerats till en servicepunkt."
+msgstr "Pakken har blitt rutet til et servicested."
 
 #: includes/class-shipment-tracking-api.php:167
 #: includes/class-shipment-tracking-admin.php:436
 #: includes/class-shipment-tracking-frontend.php:354
 msgid "The shipment item is under transportation."
-msgstr "Fraktobjektet är under transport."
+msgstr "Pakken er under transport."
 
 #. Author of the plugin
 msgid "Thomas Audunhus"
@@ -413,124 +405,124 @@ msgstr "Thomas Audunhus"
 
 #: includes/class-shipment-tracking-frontend.php:192
 msgid "Track Package"
-msgstr "Spåra paket"
+msgstr "Spor pakke"
 
 #. Description of the plugin
 msgid "Track shipments using the DirectHouse warehouse API."
-msgstr "Spåra försändelser med hjälp av DirectHouse lager-API."
+msgstr "Spor sendinger ved hjelp av DirectHouse lager-API."
 
 #: includes/class-shipment-tracking-frontend.php:189
 msgid "Track Your Package"
-msgstr "Spåra ditt paket"
+msgstr "Spor pakken din"
 
 #: includes/class-shipment-tracking-admin.php:190
 msgid "Tracking"
-msgstr "Spårning"
+msgstr "Sporing"
 
 #: includes/class-shipment-tracking-frontend.php:77
 msgid "Tracking information is not yet available for this order."
-msgstr "Spårningsinformation är ännu inte tillgänglig för denna beställning."
+msgstr "Sporingsinformasjon er ikke tilgjengelig for denne bestillingen ennå."
 
 #: includes/class-shipment-tracking-frontend.php:417
 msgid "Tracking information updated!"
-msgstr "Spårningsinformation uppdaterad!"
+msgstr "Sporingsinformasjon oppdatert!"
 
 #: includes/class-shipment-tracking-admin.php:416
 msgid "Tracking Link:"
-msgstr "Spårningslänk:"
+msgstr "Sporingslenke:"
 
 #: includes/class-shipment-tracking-admin.php:80
 msgid "Tracking Number:"
-msgstr "Spårningsnummer:"
+msgstr "Sporingsnummer:"
 
 #: includes/class-shipment-tracking-frontend.php:303
 msgid "Tracking Timeline"
-msgstr "Spårningstidslinje"
+msgstr "Tidslinje"
 
 #: includes/class-shipment-tracking-cron.php:375
 msgid "Tracking update completed"
-msgstr "Spårningsuppdatering slutförd"
+msgstr "Sporingsoppdatering fullført"
 
 #: includes/class-shipment-tracking-admin.php:311
 msgid "Tracking updated successfully!"
-msgstr "Spårning uppdaterad framgångsrikt!"
+msgstr "Sporing oppdatert vellykket!"
 
 #: includes/class-shipment-tracking-admin.php:532
 #: includes/class-shipment-tracking-admin.php:643
 msgid "Twice Daily"
-msgstr "Två gånger dagligen"
+msgstr "To ganger daglig"
 
 #: includes/class-shipment-tracking-admin.php:119
 #: includes/class-shipment-tracking-admin.php:265
 #: includes/class-shipment-tracking-frontend.php:138
 #: includes/class-shipment-tracking-frontend.php:512
 msgid "Unknown"
-msgstr "Okänd"
+msgstr "Ukjent"
 
 #: includes/class-shipment-tracking-admin.php:517
 #: includes/class-shipment-tracking-admin.php:612
 msgid "Update Interval"
-msgstr "Uppdateringsintervall"
+msgstr "Oppdateringsintervall"
 
 #: includes/class-shipment-tracking-admin.php:654
 msgid "Update Interval:"
-msgstr "Uppdateringsintervall:"
+msgstr ""
 
 #: includes/class-shipment-tracking-admin.php:90
 msgid "Update Tracking"
-msgstr "Uppdatera spårning"
+msgstr "Oppdater sporing"
 
 #: includes/class-shipment-tracking-admin.php:84
 msgid "Update Tracking Number:"
-msgstr "Uppdatera spårningsnummer:"
+msgstr "Oppdater sporingsnummer:"
 
 #: includes/class-shipment-tracking-frontend.php:416
 msgid "Updating tracking information..."
-msgstr "Uppdaterar spårningsinformation..."
+msgstr "Oppdaterer sporingsinformasjon..."
 
 #: includes/class-shipment-tracking-admin.php:310
 msgid "Updating..."
-msgstr "Uppdaterar..."
+msgstr "Oppdaterer..."
 
 #: includes/class-shipment-tracking-admin.php:632
 msgid "Use Global Interval"
-msgstr "Använd globalt intervall"
+msgstr ""
 
 #: includes/class-shipment-tracking-frontend.php:178
 msgid "View detailed timeline"
-msgstr "Visa detaljerad tidslinje"
+msgstr "Vis detaljert tidslinje"
 
 #: includes/class-shipment-tracking-admin.php:418
 msgid "View on carrier website"
-msgstr "Visa på transportörens webbplats"
+msgstr "Vis på transportørens nettsted"
 
 #: includes/class-shipment-tracking-admin.php:116
 #: includes/class-shipment-tracking-admin.php:262
 #: includes/class-shipment-tracking-frontend.php:135
 #: includes/class-shipment-tracking-frontend.php:509
 msgid "Waiting to be picked"
-msgstr "Väntar på att bli hämtad"
+msgstr "Venter på å bli hentet"
 
 #: includes/class-shipment-tracking-api.php:192
 msgid ""
 "We're currently having problems retrieving the order information associated "
 "with the tracking number."
 msgstr ""
-"Vi har för närvarande problem med att hämta orderinformationen kopplad till "
-"spårningsnumret."
+"Vi har for øyeblikket problemer med å hente bestillingsinformasjonen knyttet "
+"til sporingsnummeret."
 
 #: includes/class-shipment-tracking-admin.php:534
 #: includes/class-shipment-tracking-admin.php:645
 msgid "Weekly"
-msgstr "Veckovis"
+msgstr "Ukentlig"
 
 #: includes/class-shipment-tracking-frontend.php:190
 msgid "You can also track your package directly on the carrier's website:"
-msgstr "Du kan också spåra ditt paket direkt på transportörens webbplats:"
+msgstr "Du kan også spore pakken din direkte på transportørens nettsted:"
 
 #: includes/class-shipment-tracking-api.php:166
 #: includes/class-shipment-tracking-admin.php:435
 #: includes/class-shipment-tracking-frontend.php:353
 msgid ""
 "Your order has left the warehouse and is being transported to the terminal"
-msgstr "Din beställning har lämnat lagret och transporteras till terminalen."
+msgstr "Pakken din har forlatt lageret og blir transportert til terminalen."

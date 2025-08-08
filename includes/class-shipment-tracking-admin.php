@@ -66,9 +66,11 @@ class ShipmentTrackingAdmin {
 			return;
 		}
 
-		$tracking_number = $order->get_meta( 'ongoing_tracking_number' );
-		$tracking_data = $order->get_meta( '_ongoing_tracking_data' );
-		$last_updated = $order->get_meta( '_ongoing_tracking_updated' );
+        $tracking_number = $order->get_meta( 'ongoing_tracking_number' );
+        $tracking = new ShipmentTracking();
+        $tracking_data = $tracking->get_tracking_data( $order->get_id() );
+        $last_updated_meta = $order->get_meta( '_ongoing_tracking_updated' );
+        $last_updated = is_array( $tracking_data ) && isset( $tracking_data['last_updated'] ) ? $tracking_data['last_updated'] : $last_updated_meta;
 
 		echo '<div id="ongoing_shipment_tracking">';
 
@@ -94,7 +96,7 @@ class ShipmentTrackingAdmin {
 		}
 
 		// Display tracking information
-		if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
+        if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
 			echo '<div class="tracking-info">';
 			echo '<h4>' . esc_html__( 'All Tracking Events', 'directhouse-ongoing-parcel-tracking' ) . '</h4>';
 			
@@ -110,6 +112,7 @@ class ShipmentTrackingAdmin {
 					'DELIVERED' => __( 'Delivered', 'directhouse-ongoing-parcel-tracking' ),
 					'AVAILABLE_FOR_DELIVERY' => __( 'Available for pickup', 'directhouse-ongoing-parcel-tracking' ),
 					'EN_ROUTE' => __( 'In transit', 'directhouse-ongoing-parcel-tracking' ),
+					'sent' => __( 'Sent', 'directhouse-ongoing-parcel-tracking' ),
 					'waiting_to_be_picked' => __( 'Waiting to be picked', 'directhouse-ongoing-parcel-tracking' ),
 					'picking' => __( 'Being picked', 'directhouse-ongoing-parcel-tracking' ),
 					'OTHER' => __( 'Other', 'directhouse-ongoing-parcel-tracking' ),
@@ -123,11 +126,30 @@ class ShipmentTrackingAdmin {
 				$formatted_date = $this->format_date_for_admin_display( $event['date'] );
 				
 				echo '<div class="tracking-event">';
-				echo '<div class="event-header">';
-				echo '<strong>' . esc_html( $formatted_date ) . '</strong>';
-				echo '<span class="event-status ' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
+            // Optional emojis in admin
+            $emoji_enabled = get_option( 'ongoing_shipment_tracking_enable_emojis', 'no' ) === 'yes';
+            if ( $emoji_enabled ) {
+                $emoji_map = [
+                    'DELIVERED' => '✅',
+                    'AVAILABLE_FOR_DELIVERY' => '📦',
+                    'EN_ROUTE' => '🚚',
+                    'sent' => '📤',
+                    'waiting_to_be_picked' => '🧺',
+                    'picking' => '🛒',
+                    'OTHER' => 'ℹ️',
+                    'unknown' => '❔',
+                ];
+                $emoji = $emoji_map[ $status ] ?? '';
+                if ( $emoji ) {
+                    $status_text = $emoji . ' ' . $status_text;
+                }
+            }
+
+            echo '<div class="event-header">';
+            echo '<strong>' . esc_html( $formatted_date ) . '</strong>';
+            echo '<span class="event-status ' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
 				echo '</div>';
-				echo '<div class="event-description">' . esc_html( $this->translate_event_description( $event['description'] ) ) . '</div>';
+                echo '<div class="event-description">' . esc_html( $this->translate_event_description( $event['description'] ) ) . '</div>';
 				if ( ! empty( $event['location'] ) ) {
 					echo '<div class="event-location"><small>' . esc_html( $event['location'] ) . '</small></div>';
 				}
@@ -208,8 +230,9 @@ class ShipmentTrackingAdmin {
 			return;
 		}
 
-		$tracking_number = $order->get_meta( 'ongoing_tracking_number' );
-		$tracking_data = $order->get_meta( '_ongoing_tracking_data' );
+        $tracking_number = $order->get_meta( 'ongoing_tracking_number' );
+        $tracking_service = new ShipmentTracking();
+        $tracking_data = $tracking_service->get_tracking_data( $post_id );
 
 		if ( empty( $tracking_number ) ) {
 			echo '<span class="tracking-status no-tracking">' . esc_html__( 'No tracking', 'directhouse-ongoing-parcel-tracking' ) . '</span>';
@@ -229,13 +252,14 @@ class ShipmentTrackingAdmin {
 			$shipping_method_info['shipping_method']
 		);
 
-		if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
+        if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
 			$latest_status = $api->get_latest_status( $tracking_data['events'] );
 			
 			$status_labels = [
 				'DELIVERED' => __( 'Delivered', 'directhouse-ongoing-parcel-tracking' ),
 				'AVAILABLE_FOR_DELIVERY' => __( 'Available for pickup', 'directhouse-ongoing-parcel-tracking' ),
 				'EN_ROUTE' => __( 'In transit', 'directhouse-ongoing-parcel-tracking' ),
+                'sent' => __( 'Sent', 'directhouse-ongoing-parcel-tracking' ),
 				'waiting_to_be_picked' => __( 'Waiting to be picked', 'directhouse-ongoing-parcel-tracking' ),
 				'picking' => __( 'Being picked', 'directhouse-ongoing-parcel-tracking' ),
 				'OTHER' => __( 'Other', 'directhouse-ongoing-parcel-tracking' ),
@@ -243,17 +267,35 @@ class ShipmentTrackingAdmin {
 			];
 
 			$status_class = 'tracking-status ' . strtolower( $latest_status );
-			$status_text = $status_labels[ $latest_status ] ?? $status_labels['unknown'];
+            $status_text = $status_labels[ $latest_status ] ?? $status_labels['unknown'];
+
+            // Optional emojis in admin orders list table
+            $emoji_enabled = get_option( 'ongoing_shipment_tracking_enable_emojis', 'no' ) === 'yes';
+            if ( $emoji_enabled ) {
+                $emoji_map = [
+                    'DELIVERED' => '✅',
+                    'AVAILABLE_FOR_DELIVERY' => '📦',
+                    'EN_ROUTE' => '🚚',
+                    'sent' => '📤',
+                    'waiting_to_be_picked' => '🧺',
+                    'picking' => '🛒',
+                    'OTHER' => 'ℹ️',
+                    'unknown' => '❔',
+                ];
+                $emoji = $emoji_map[ $latest_status ] ?? '';
+                if ( $emoji ) {
+                    $status_text = $emoji . ' ' . $status_text;
+                }
+            }
 			
 			echo '<div class="tracking-column-content">';
 			echo '<span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
 			
 			echo '</div>';
 		} else {
-			echo '<div class="tracking-column-content">';
-			echo '<span class="tracking-status no-data">' . esc_html__( 'No data', 'directhouse-ongoing-parcel-tracking' ) . '</span>';
-			
-			echo '</div>';
+            echo '<div class="tracking-column-content">';
+            echo '<span class="tracking-status no-data">' . esc_html__( 'No data', 'directhouse-ongoing-parcel-tracking' ) . '</span>';
+            echo '</div>';
 		}
 	}
 
@@ -270,13 +312,13 @@ class ShipmentTrackingAdmin {
 		$screen = get_current_screen();
 		
 		if ( $screen && $screen->post_type === 'shop_order' ) {
-			wp_enqueue_script(
-				'directhouse-ongoing-parcel-tracking-admin',
-				PLUGIN_URL . 'assets/js/admin.js',
-				[ 'jquery' ],
-				PLUGIN_VERSION,
-				true
-			);
+            wp_enqueue_script(
+                'directhouse-ongoing-parcel-tracking-admin',
+                plugins_url( 'assets/js/admin.js', dirname( __DIR__ ) . '/woo-directhouse-ongoing-parcel-tracking.php' ),
+                [ 'jquery' ],
+                ( defined( __NAMESPACE__ . '\\PLUGIN_VERSION' ) ? constant( __NAMESPACE__ . '\\PLUGIN_VERSION' ) : '1.0.0' ),
+                true
+            );
 
 			wp_localize_script(
 				'directhouse-ongoing-parcel-tracking-admin',
@@ -292,12 +334,12 @@ class ShipmentTrackingAdmin {
 				]
 			);
 
-			wp_enqueue_style(
-				'directhouse-ongoing-parcel-tracking-admin',
-				PLUGIN_URL . 'assets/css/admin.css',
-				[],
-				PLUGIN_VERSION
-			);
+            wp_enqueue_style(
+                'directhouse-ongoing-parcel-tracking-admin',
+                plugins_url( 'assets/css/admin.css', dirname( __DIR__ ) . '/woo-directhouse-ongoing-parcel-tracking.php' ),
+                [],
+                ( defined( __NAMESPACE__ . '\\PLUGIN_VERSION' ) ? constant( __NAMESPACE__ . '\\PLUGIN_VERSION' ) : '1.0.0' )
+            );
 		}
 	}
 
@@ -333,25 +375,25 @@ class ShipmentTrackingAdmin {
 			$order->update_meta_data( 'ongoing_tracking_number', $tracking_number );
 		}
 
-		// Get tracking data
-		$api = new ShipmentTrackingAPI();
-		$tracking_data = $api->get_tracking_data( $tracking_number );
+        // Get tracking data
+        $api = new ShipmentTrackingAPI();
+        $tracking_data = $api->get_tracking_data( $tracking_number );
 		
 		if ( is_wp_error( $tracking_data ) ) {
 			wp_send_json_error( $tracking_data->get_error_message() );
 		}
 
-		// Store the tracking data
-		$order->update_meta_data( '_ongoing_tracking_data', $tracking_data );
-		$order->update_meta_data( '_ongoing_tracking_updated', current_time( 'mysql' ) );
-		
-		// Sync current status to separate meta field
-		if ( ! empty( $tracking_data['events'] ) ) {
-			$current_status = $api->get_latest_status( $tracking_data['events'] );
-			$order->update_meta_data( '_ongoing_tracking_status', $current_status );
-		}
-		
-		$order->save();
+        // Persist to repository and minimally sync meta
+        $repo = new ShipmentTrackingRepository();
+        $latest_status = ! empty( $tracking_data['events'] ) ? $api->get_latest_status( $tracking_data['events'] ) : '';
+        $repo->upsert_order_tracking( (int) $order_id, (string) $tracking_number, $tracking_data, (string) $latest_status );
+
+        $order->update_meta_data( '_ongoing_tracking_data', $tracking_data );
+        $order->update_meta_data( '_ongoing_tracking_updated', current_time( 'mysql' ) );
+        if ( $latest_status ) {
+            $order->update_meta_data( '_ongoing_tracking_status', $latest_status );
+        }
+        $order->save();
 
 		wp_send_json_success( $tracking_data );
 	}
@@ -362,6 +404,16 @@ class ShipmentTrackingAdmin {
 	 * @param WC_Order $order The order object.
 	 */
 	public function add_tracking_link_to_order_data( $order ) {
+        // Prevent duplicate output in cases where the action fires multiple times
+        static $printed_for_orders = [];
+        if ( $order && method_exists( $order, 'get_id' ) ) {
+            $order_id = (int) $order->get_id();
+            if ( in_array( $order_id, $printed_for_orders, true ) ) {
+                return;
+            }
+            $printed_for_orders[] = $order_id;
+        }
+
 		$tracking_number = $order->get_meta( 'ongoing_tracking_number' );
 		
 		if ( empty( $tracking_number ) ) {
@@ -517,6 +569,13 @@ class ShipmentTrackingAdmin {
 				'id'   => 'ongoing_shipment_tracking_enable_column',
 				'default' => 'yes'
 			],
+            [
+                'name' => __( 'Enable Status Emojis', 'directhouse-ongoing-parcel-tracking' ),
+                'type' => 'checkbox',
+                'desc' => __( 'Show emojis next to statuses in admin and customer views.', 'directhouse-ongoing-parcel-tracking' ),
+                'id'   => 'ongoing_shipment_tracking_enable_emojis',
+                'default' => 'no'
+            ],
 			[
 				'name' => __( 'Max Updates Per Run', 'directhouse-ongoing-parcel-tracking' ),
 				'type' => 'number',

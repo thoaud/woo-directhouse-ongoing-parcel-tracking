@@ -1,0 +1,12 @@
+TODO:
+- [ ] Move data we pull into a separate table instead of using metadata
+  - [ ] Design table structure with the following columns:
+    - [ ] site_id (NULLABLE) for multisite installs
+    - [ ] order_id
+    - [ ] tracking_data columns (based on current data structure)
+  - [ ] Create database migration script
+  - [ ] Add useful database indexes for performance
+  - [ ] Update code to use new table instead of metadata
+  - [ ] Test on multisite installations
+  - [ ] Verify this prevents order updates when tracking data changes
+  - [ ] Ensure scalability improvements are achieved

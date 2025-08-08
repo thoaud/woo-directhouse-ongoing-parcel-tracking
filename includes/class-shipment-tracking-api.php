@@ -144,10 +144,10 @@ class ShipmentTrackingAPI {
 			$formatted[] = $formatted_event;
 		}
 
-		// Sort by timestamp (oldest first for chronological order)
-		usort( $formatted, function( $a, $b ) {
-			return $a['timestamp'] - $b['timestamp'];
-		} );
+        // Sort by UTC timestamp (oldest first for chronological order) before returning
+        usort( $formatted, function( $a, $b ) {
+            return (int) $a['timestamp'] <=> (int) $b['timestamp'];
+        } );
 
 		return $formatted;
 	}
@@ -202,25 +202,20 @@ class ShipmentTrackingAPI {
 	 * @param string $date_string Date string from API
 	 * @return string Formatted date
 	 */
-	private function format_date( $date_string ) {
-		if ( empty( $date_string ) ) {
-			return '';
-		}
+    private function format_date( $date_string ) {
+        if ( empty( $date_string ) ) {
+            return '';
+        }
 
-		try {
-			// Create DateTime object from the ISO 8601 date string
-			$date = new \DateTime( $date_string );
-			
-			// Convert to WordPress timezone for display
-			$wp_timezone = wp_timezone();
-			$date->setTimezone( $wp_timezone );
-			
-			// Return formatted date in WordPress timezone
-			return $date->format( 'Y-m-d H:i:s' );
-		} catch ( \Exception $e ) {
-			return $date_string;
-		}
-	}
+        try {
+            // Parse source with its offset, convert to UTC and store in ISO 8601 with +00:00
+            $date = new \DateTime( $date_string );
+            $date->setTimezone( new \DateTimeZone( 'UTC' ) );
+            return $date->format( 'Y-m-d\TH:i:s+00:00' );
+        } catch ( \Exception $e ) {
+            return $date_string;
+        }
+    }
 
 	/**
 	 * Get UTC timestamp from date string
@@ -228,7 +223,7 @@ class ShipmentTrackingAPI {
 	 * @param string $date_string Date string from API
 	 * @return int UTC timestamp
 	 */
-	private function get_utc_timestamp( $date_string ) {
+    private function get_utc_timestamp( $date_string ) {
 		if ( empty( $date_string ) ) {
 			return 0;
 		}
@@ -277,33 +272,104 @@ class ShipmentTrackingAPI {
 	 * @param array $events Formatted events (with original descriptions)
 	 * @return string Status
 	 */
-	public function get_latest_status( $events ) {
-		if ( empty( $events ) ) {
-			return 'unknown';
-		}
+    public function get_latest_status( $events ) {
+        if ( empty( $events ) ) {
+            return 'unknown';
+        }
 
-		// Since events are now sorted chronologically (oldest first), 
-		// we need to find the last meaningful status
-		$meaningful_status = 'unknown';
-		
-		foreach ( $events as $event ) {
-			$status = $event['transporter_status'] ?? 'unknown';
-			if ( $status !== 'OTHER' && $status !== 'unknown' ) {
-				$meaningful_status = $status;
-			}
-		}
+        // Events are sorted oldest first. Track last transporter status and any warehouse picking cues.
+        $last_transporter_status = 'unknown';
+        $found_waiting = false;
+        $found_picking = false;
+        $found_sent = false;
+        $found_delivered = false;
 
-		// Check if the latest event indicates picking status
-		$latest_event = end( $events );
-		if ( $latest_event && $this->is_waiting_to_be_picked_event( $latest_event ) ) {
-			return 'waiting_to_be_picked';
-		}
-		if ( $latest_event && $this->is_being_picked_event( $latest_event ) ) {
-			return 'picking';
-		}
+        foreach ( $events as $event ) {
+            $status = $event['transporter_status'] ?? 'unknown';
+            if ( $status && $status !== 'OTHER' && $status !== 'unknown' ) {
+                $last_transporter_status = $status;
+            }
 
-		return $meaningful_status;
-	}
+            // Capture any warehouse picking cues across the whole timeline
+            if ( $this->is_waiting_to_be_picked_event( $event ) ) {
+                $found_waiting = true;
+            }
+            if ( $this->is_being_picked_event( $event ) ) {
+                $found_picking = true;
+            }
+            if ( $this->is_sent_event( $event ) ) {
+                $found_sent = true;
+            }
+            if ( $status === 'DELIVERED' ) {
+                $found_delivered = true;
+            }
+        }
+
+        // If delivered occurred at any point, it is the effective latest status
+        if ( $found_delivered ) {
+            return 'DELIVERED';
+        }
+
+        // If we have a clear transporter status, prefer it.
+        if ( $last_transporter_status !== 'unknown' ) {
+            return $last_transporter_status;
+        }
+
+        // Otherwise infer from the latest warehouse event first.
+        $latest_event = end( $events );
+        if ( $latest_event ) {
+            if ( $this->is_sent_event( $latest_event ) ) {
+                return 'sent';
+            }
+            if ( $this->is_being_picked_event( $latest_event ) ) {
+                return 'picking';
+            }
+            if ( $this->is_waiting_to_be_picked_event( $latest_event ) ) {
+                return 'waiting_to_be_picked';
+            }
+        }
+
+        // Fall back to any earlier warehouse cues if latest didn't match.
+        if ( $found_sent ) {
+            return 'sent';
+        }
+        if ( $found_picking ) {
+            return 'picking';
+        }
+        if ( $found_waiting ) {
+            return 'waiting_to_be_picked';
+        }
+
+        return 'unknown';
+    }
+
+    /**
+     * Check if an event indicates the order has been sent (left warehouse)
+     *
+     * @param array $event Event data
+     * @return bool True if event indicates sent
+     */
+    private function is_sent_event( $event ) {
+        $description = strtolower( $event['description'] ?? '' );
+        $type = strtolower( $event['type'] ?? '' );
+        // Look for phrases indicating the parcel left the warehouse en route to terminal
+        $keywords = [
+            'left the warehouse',
+            'transported to the terminal',
+            'being transported to the terminal', // account for corrected wording
+            'beeing transported to the terminal', // original misspelling from upstream
+        ];
+        foreach ( $keywords as $keyword ) {
+            if ( strpos( $description, $keyword ) !== false ) {
+                return true;
+            }
+        }
+        // Also treat Warehouse type with strong hint "left" as sent
+        if ( $type === 'warehouse' && strpos( $description, 'left' ) !== false ) {
+            return true;
+        }
+        return false;
+    }
 
 	/**
 	 * Check if an event indicates waiting to be picked status

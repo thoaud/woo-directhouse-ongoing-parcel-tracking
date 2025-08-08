@@ -65,6 +65,11 @@
 	color: white;
 }
 
+#ongoing_shipment_tracking .admin-status-sent {
+	background: #5bc0de;
+	color: white;
+}
+
 #ongoing_shipment_tracking .admin-status-waiting_to_be_picked {
 	background: #ffc107;
 	color: #333;
@@ -141,6 +146,11 @@
 
 .tracking-status.en_route {
 	background: #0073aa;
+	color: white;
+}
+
+.tracking-status.sent {
+	background: #5bc0de;
 	color: white;
 }
 
