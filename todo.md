@@ -38,3 +38,7 @@
   - [ ] Add retry mechanism for failed webhook processing
   - [ ] Document webhook integration process
   - [ ] Create example webhook payloads
+
+- [ ] Integrate directly with carriers to improve data quality
+
+- [ ] Interpret the location and place it on a map displayed on the order page

@@ -12,6 +12,9 @@ A WordPress plugin for WooCommerce that integrates with the DirectHouse Ongoing 
 - **Carrier Integration**: Automatic tracking links for PostNord, Instabox, Bring, Posten, and HeltHjem
 - **WP CLI Support**: Command-line interface for manual updates and status checks
 - **Responsive Design**: Works perfectly on desktop and mobile devices
+- **UTC-Accurate Dates**: Source timestamps with offsets are normalized to UTC and then shown in the site timezone
+- **Parallel Updates**: Optional parallel processing with deferred retries for better throughput
+- **Status Emojis (optional)**: Toggle to show emojis alongside statuses in timelines and tables
 
 ## Requirements
 
@@ -59,6 +62,8 @@ The plugin settings are located at:
 - **Update Interval**: Choose from 15 minutes to weekly
 - **Exclude Delivered Orders**: Skip orders already marked as delivered
 - **Order Status Control**: Individual checkboxes for each order status
+- **Enable Tracking Column**: Adds a status column to the WooCommerce orders list in admin
+- **Enable Status Emojis**: Adds emojis to status badges in admin/customer views and order tables
 
 ## Usage
 
@@ -67,6 +72,7 @@ The plugin settings are located at:
 1. Customers can view tracking information on their order details page in "My Account"
 2. A "Refresh Tracking Information" button allows manual updates
 3. Tracking data automatically updates when the page loads (if data is older than 2 hours)
+4. The order timeline hides events after the last "DELIVERED" event to avoid noise
 
 ### For Administrators
 
@@ -83,21 +89,11 @@ The plugin settings are located at:
 
 ```php
 // Customize API base URL
-add_filter('directhouse_ongoing_parcel_tracking_api_base_url', function($url) {
+add_filter('ongoing_shipment_tracking_api_base_url', function($url) {
     return 'https://your-api.com/';
 });
 
-// Modify tracking data before display
-add_filter('directhouse_ongoing_parcel_tracking_data', function($data, $order_id) {
-    // Modify $data as needed
-    return $data;
-}, 10, 2);
-
-// Customize status labels
-add_filter('directhouse_ongoing_parcel_tracking_status_labels', function($labels) {
-    $labels['CUSTOM_STATUS'] = 'Custom Status Label';
-    return $labels;
-});
+// You can also translate status texts via standard WordPress translation tools.
 ```
 
 #### Programmatic Usage
@@ -132,6 +128,9 @@ wp directhouse-tracking update --statuses=processing,completed
 
 # Include delivered orders in update
 wp directhouse-tracking update --include-delivered
+
+# Parallel processing with limit and optimized queries
+wp directhouse-tracking update --parallel --limit=100 --fast-query
 ```
 
 ## API Response Format
@@ -158,6 +157,7 @@ The plugin expects the API to return JSON in this format:
 - `DELIVERED`: Order has been delivered
 - `AVAILABLE_FOR_DELIVERY`: Order is available for pickup
 - `EN_ROUTE`: Order is in transit
+- `sent`: Order left the warehouse and is en route to terminal (inferred from warehouse events)
 - `waiting_to_be_picked`: Order is waiting to be picked in warehouse
 - `picking`: Order is being picked in warehouse
 - `OTHER`: Other status (notifications, etc.)
@@ -224,9 +224,21 @@ wp directhouse-tracking status
 
 # Test tracking updates with verbose output
 wp directhouse-tracking update --verbose
+
+# Example sequence used to test batch behavior
+wp directhouse-tracking cleanup && \
+wp directhouse-tracking update --parallel --limit=100
 ```
 
 ## Changelog
+
+### Recent Changes
+- Added optional status emojis for admin/customer timelines and order tables (setting: "Enable Status Emojis")
+- Introduced inferred status `sent` for events indicating the parcel left the warehouse/is transported to terminal
+- Normalized all event dates to UTC; display uses the site’s timezone. Events are stored sorted by UTC time
+- My Account timeline now hides events that occur after the last DELIVERED event
+- WP-CLI: parallel mode appends retries to the end of the queue; batch size no longer increases automatically; added `--fast-query`
+- Fixed duplicate tracking link rendering in the admin order view
 
 ### Version 1.0.0
 - Initial release
