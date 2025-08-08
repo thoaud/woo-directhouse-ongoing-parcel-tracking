@@ -379,11 +379,19 @@ class ShipmentTracking {
 			return new \WP_Error( 'no_tracking_number', 'No tracking number found' );
 		}
 
-		// Check rate limiting before making API call
+        // Check rate limiting before making API call
 		if ( ! $this->can_make_api_request( $tracking_number ) ) {
 			// Wait for rate limit to reset (quiet mode for sequential processing)
 			$this->wait_for_rate_limit_reset( true );
 		}
+
+        // Mark as fetched-in-progress to avoid duplicate fetch attempts elsewhere
+        $existing_payload = $order->get_meta( '_ongoing_tracking_data' );
+        if ( $existing_payload === '' || $existing_payload === null ) {
+            $order->update_meta_data( '_ongoing_tracking_data', '{}' );
+            $order->update_meta_data( '_ongoing_tracking_updated', gmdate( 'Y-m-d H:i:s' ) );
+            $order->save();
+        }
 
         $tracking_data = $this->api->get_tracking_data( $tracking_number );
 		
@@ -2201,8 +2209,9 @@ class ShipmentTracking {
 			$sql .= " AND (" . implode( ' OR ', $age_conditions ) . ")";
 		}
 
-		// Add condition to only get orders that haven't been fetched yet
-		$sql .= " AND pm_data.meta_value IS NULL";
+        // Add condition to only get orders that haven't been fetched yet
+        // Treat empty string as unfetched; '{}' (in-progress marker) should be considered fetched-in-progress and excluded
+        $sql .= " AND (pm_data.meta_value IS NULL OR pm_data.meta_value = '')";
 
 		// Add exclude delivered condition
 		if ( $exclude_delivered ) {
