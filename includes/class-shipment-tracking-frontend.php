@@ -321,7 +321,7 @@ class ShipmentTrackingFrontend {
 			
 			// Event content
 			echo '<div class="event-content">';
-			echo '<div class="event-description">' . esc_html( $this->translate_event_description( $event['description'] ) ) . '</div>';
+							echo '<div class="event-description">' . esc_html( $event['description'] ) . '</div>';
 			
 			if ( ! empty( $event['location'] ) ) {
 				echo '<div class="event-location">';

@@ -1252,11 +1252,24 @@ class ShipmentTracking {
 
 		$orders = wc_get_orders( $query_args );
 
-		if ( ! $quiet ) {
-			\WP_CLI::log( sprintf( 'Found %d orders to update. Starting update process...', count( $orders ) ) );
+		// Filter out orders without valid tracking numbers (double-check)
+		$valid_orders = [];
+		foreach ( $orders as $order_id ) {
+			$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
+			if ( ! empty( trim( $tracking_number ) ) ) {
+				$valid_orders[] = $order_id;
+			} else {
+				if ( ! $quiet ) {
+					\WP_CLI::log( sprintf( 'Filtering out order %d - no valid tracking number', $order_id ) );
+				}
+			}
 		}
 
-		return $orders;
+		if ( ! $quiet ) {
+			\WP_CLI::log( sprintf( 'Found %d orders to update (filtered from %d total). Starting update process...', count( $valid_orders ), count( $orders ) ) );
+		}
+
+		return $valid_orders;
 	}
 	
 

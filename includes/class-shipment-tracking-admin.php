@@ -148,7 +148,7 @@ class ShipmentTrackingAdmin {
 				echo '<strong>' . esc_html( $formatted_date ) . '</strong>';
 				echo '<span class="event-status ' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
 				echo '</div>';
-                echo '<div class="event-description">' . esc_html( $this->translate_event_description( $event['description'] ) ) . '</div>';
+                				echo '<div class="event-description">' . esc_html( $event['description'] ) . '</div>';
 				if ( ! empty( $event['location'] ) ) {
 					echo '<div class="event-location"><small>' . esc_html( $event['location'] ) . '</small></div>';
 				}

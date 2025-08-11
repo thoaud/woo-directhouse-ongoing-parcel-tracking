@@ -161,7 +161,7 @@ class ShipmentTrackingAPI {
 			
 			$formatted_event = [
 				'date' => $this->format_date( $event['date'] ?? '' ),
-				'description' => $event['eventdescription'] ?? '', // Store original, translate at display time
+				'description' => $this->translate_event_description( $event['eventdescription'] ?? '' ), // Apply translation here
 				'location' => $event['location'] ?? '',
 				'type' => $event['type'] ?? '',
 				'transporter_status' => $event['transporter_status'] ?? '',
