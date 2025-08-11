@@ -92,7 +92,7 @@ class ShipmentTrackingFrontend {
 
 		// Display tracking information
         if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
-            $this->display_tracking_combined_section( $tracking_data['events'], $order_id, $tracking_link, $last_updated );
+            		$this->display_tracking_combined_section( $tracking_data, $order_id, $tracking_link, $last_updated );
 		} else {
 			echo '<p>' . esc_html__( 'No tracking information available yet. Please check back later.', 'directhouse-ongoing-parcel-tracking' ) . '</p>';
 		}
@@ -108,9 +108,9 @@ class ShipmentTrackingFrontend {
 	 * @param string|null $tracking_link Tracking link URL
 	 * @param string|null $last_updated Last updated timestamp
 	 */
-	private function display_tracking_combined_section( $events, $order_id, $tracking_link = null, $last_updated = null ) {
+	private function display_tracking_combined_section( $tracking_data, $order_id, $tracking_link = null, $last_updated = null ) {
 		$api = new ShipmentTrackingAPI();
-		$latest_status = $api->get_latest_status( $events );
+		$latest_status = $api->get_latest_status_from_raw_data( $tracking_data );
 		
 		// Combined status summary and tracking link section
 		echo '<div class="tracking-combined-section">';

@@ -414,7 +414,7 @@ class ShipmentTracking {
         // Persist to dedicated table first, then sync a minimal status/meta snapshot
         $latest_status = '';
         if ( ! empty( $tracking_data['events'] ) ) {
-            $latest_status = $this->api->get_latest_status( $tracking_data['events'] );
+            		$latest_status = $this->api->get_latest_status_from_raw_data( $tracking_data );
         }
 
         // Store in repository
@@ -449,7 +449,7 @@ class ShipmentTracking {
             // Add status if events are available
             $current_status = '';
             if ( ! empty( $tracking_data['events'] ) ) {
-                $current_status = $this->api->get_latest_status( $tracking_data['events'] );
+                		$current_status = $this->api->get_latest_status_from_raw_data( $tracking_data );
                 $meta_updates['_ongoing_tracking_status'] = $current_status;
             }
 			
@@ -1318,6 +1318,10 @@ class ShipmentTracking {
 				\WP_CLI::log( 'Showing debug log...' );
 				$this->wp_cli_debug_log( $assoc_args );
 				break;
+			case 'cleanup-meta':
+				\WP_CLI::log( 'Cleaning up old tracking meta data...' );
+				$this->wp_cli_cleanup_meta( $assoc_args );
+				break;
 			case 'assign-test-numbers':
 				if ( ! $is_dev_environment ) {
 					\WP_CLI::error( sprintf( 'Command "assign-test-numbers" is only available in development environments. Current environment: %s', $current_env ?: 'production' ) );
@@ -1327,7 +1331,7 @@ class ShipmentTracking {
 				$this->wp_cli_assign_test_numbers( $assoc_args );
 				break;
 			default:
-				\WP_CLI::error( sprintf( 'Unknown command: %s. Use "update", "update-unfetched", "schedule-unfetched", "cleanup", "status", "backfill", or "assign-test-numbers" (in dev environments).', $command ) );
+				\WP_CLI::error( sprintf( 'Unknown command: %s. Use "update", "update-unfetched", "schedule-unfetched", "cleanup", "cleanup-meta", "status", "debug-log", "backfill", "fix-database", or "assign-test-numbers" (in dev environments).', $command ) );
 		}
 	}
 
@@ -1410,6 +1414,109 @@ class ShipmentTracking {
 		}
 	}
 
+	private function wp_cli_cleanup_meta( $assoc_args ) {
+		global $wpdb;
+		
+		$batch_size = isset( $assoc_args['batch-size'] ) ? intval( $assoc_args['batch-size'] ) : 100;
+		$dry_run = isset( $assoc_args['dry-run'] );
+		$force = isset( $assoc_args['force'] );
+		
+		if ( ! $force && ! $dry_run ) {
+			\WP_CLI::warning( 'This will permanently delete all _ongoing_tracking_data meta fields.' );
+			\WP_CLI::warning( 'Use --force to proceed or --dry-run to see what would be deleted.' );
+			return;
+		}
+		
+		// First, count total records to delete
+		$total_count = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = %s",
+			'_ongoing_tracking_data'
+		) );
+		
+		if ( $total_count == 0 ) {
+			\WP_CLI::success( 'No _ongoing_tracking_data meta fields found to delete.' );
+			return;
+		}
+		
+		\WP_CLI::log( sprintf( 'Found %d _ongoing_tracking_data meta fields to delete.', $total_count ) );
+		\WP_CLI::log( sprintf( 'Batch size: %d', $batch_size ) );
+		
+		if ( $dry_run ) {
+			\WP_CLI::log( 'DRY RUN - No data will be deleted.' );
+		}
+		
+		$deleted_count = 0;
+		$batch_count = 0;
+		
+		do {
+			$batch_count++;
+			\WP_CLI::log( sprintf( 'Processing batch %d...', $batch_count ) );
+			
+			// Get batch of records to delete
+			$records = $wpdb->get_results( $wpdb->prepare(
+				"SELECT post_id, meta_id FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT %d",
+				'_ongoing_tracking_data',
+				$batch_size
+			) );
+			
+			if ( empty( $records ) ) {
+				break;
+			}
+			
+			$batch_deleted = 0;
+			
+			if ( ! $dry_run ) {
+				// Delete the batch
+				$meta_ids = wp_list_pluck( $records, 'meta_id' );
+				$meta_ids_placeholders = implode( ',', array_fill( 0, count( $meta_ids ), '%d' ) );
+				
+				$result = $wpdb->query( $wpdb->prepare(
+					"DELETE FROM {$wpdb->postmeta} WHERE meta_id IN ($meta_ids_placeholders)",
+					$meta_ids
+				) );
+				
+				if ( $result !== false ) {
+					$batch_deleted = $result;
+					$deleted_count += $batch_deleted;
+				} else {
+					\WP_CLI::error( sprintf( 'Error deleting batch %d: %s', $batch_count, $wpdb->last_error ) );
+					return;
+				}
+			} else {
+				$batch_deleted = count( $records );
+				$deleted_count += $batch_deleted;
+			}
+			
+			\WP_CLI::log( sprintf( 'Batch %d: %d records %s', $batch_count, $batch_deleted, $dry_run ? 'would be deleted' : 'deleted' ) );
+			
+			// Progress update
+			$progress = round( ( $deleted_count / $total_count ) * 100, 1 );
+			\WP_CLI::log( sprintf( 'Progress: %d/%d (%s%%)', $deleted_count, $total_count, $progress ) );
+			
+		} while ( count( $records ) == $batch_size );
+		
+		\WP_CLI::success( sprintf( 
+			'%s %d _ongoing_tracking_data meta fields in %d batches.', 
+			$dry_run ? 'Would delete' : 'Successfully deleted',
+			$deleted_count,
+			$batch_count
+		) );
+		
+		if ( ! $dry_run ) {
+			// Verify deletion
+			$remaining_count = $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = %s",
+				'_ongoing_tracking_data'
+			) );
+			
+			if ( $remaining_count > 0 ) {
+				\WP_CLI::warning( sprintf( '%d _ongoing_tracking_data meta fields still remain.', $remaining_count ) );
+			} else {
+				\WP_CLI::success( 'All _ongoing_tracking_data meta fields have been successfully deleted.' );
+			}
+		}
+	}
+
 	/**
 	 * Display help information for WP CLI command
 	 */
@@ -1431,6 +1538,7 @@ class ShipmentTracking {
 		\WP_CLI::log( '  cleanup             Clean up tracking data from orders' );
 		\WP_CLI::log( '  status              Show plugin status and configuration' );
 		\WP_CLI::log( '  debug-log           Show debug log (requires debug logging enabled)' );
+		\WP_CLI::log( '  cleanup-meta        Clean up old _ongoing_tracking_data meta fields' );
 		\WP_CLI::log( '  backfill            Backfill existing tracking data to repository table' );
 		\WP_CLI::log( '  fix-database        Force fix database table structure' );
 		

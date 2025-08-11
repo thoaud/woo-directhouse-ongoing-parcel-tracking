@@ -296,6 +296,20 @@ class ShipmentTrackingAPI {
 	}
 
 	/**
+	 * Get latest status from raw tracking data (preferred method)
+	 * 
+	 * @param array $tracking_data Full tracking data array with raw_data.events
+	 * @return string Latest status
+	 */
+	public function get_latest_status_from_raw_data( $tracking_data ) {
+		if ( empty( $tracking_data['raw_data']['events'] ) ) {
+			return 'unknown';
+		}
+		
+		return $this->get_latest_status( $tracking_data['raw_data']['events'] );
+	}
+
+	/**
 	 * Get latest event status
 	 *
 	 * @param array $events Formatted events (with original descriptions)

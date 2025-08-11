@@ -112,6 +112,7 @@ class ShipmentTrackingAdmin {
 					'DELIVERED' => __( 'Delivered', 'directhouse-ongoing-parcel-tracking' ),
 					'AVAILABLE_FOR_DELIVERY' => __( 'Available for pickup', 'directhouse-ongoing-parcel-tracking' ),
 					'EN_ROUTE' => __( 'In transit', 'directhouse-ongoing-parcel-tracking' ),
+					'sent' => __( 'Sent', 'directhouse-ongoing-parcel-tracking' ),
 					'waiting_to_be_picked' => __( 'Waiting to be picked', 'directhouse-ongoing-parcel-tracking' ),
 					'picking' => __( 'Being picked', 'directhouse-ongoing-parcel-tracking' ),
 					'OTHER' => __( 'Other', 'directhouse-ongoing-parcel-tracking' ),
@@ -252,12 +253,13 @@ class ShipmentTrackingAdmin {
 		);
 
 		if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
-			$latest_status = $api->get_latest_status( $tracking_data['events'] );
+			$latest_status = $api->get_latest_status_from_raw_data( $tracking_data );
 			
 			$status_labels = [
 				'DELIVERED' => __( 'Delivered', 'directhouse-ongoing-parcel-tracking' ),
 				'AVAILABLE_FOR_DELIVERY' => __( 'Available for pickup', 'directhouse-ongoing-parcel-tracking' ),
 				'EN_ROUTE' => __( 'In transit', 'directhouse-ongoing-parcel-tracking' ),
+				'sent' => __( 'Sent', 'directhouse-ongoing-parcel-tracking' ),
 				'waiting_to_be_picked' => __( 'Waiting to be picked', 'directhouse-ongoing-parcel-tracking' ),
 				'picking' => __( 'Being picked', 'directhouse-ongoing-parcel-tracking' ),
 				'OTHER' => __( 'Other', 'directhouse-ongoing-parcel-tracking' ),
@@ -383,7 +385,7 @@ class ShipmentTrackingAdmin {
 
         // Persist to repository and minimally sync meta
         $repo = new ShipmentTrackingRepository();
-        $latest_status = ! empty( $tracking_data['events'] ) ? $api->get_latest_status( $tracking_data['events'] ) : '';
+        		$latest_status = ! empty( $tracking_data['events'] ) ? $api->get_latest_status_from_raw_data( $tracking_data ) : '';
         $repo->upsert_order_tracking( (int) $order_id, (string) $tracking_number, $tracking_data, (string) $latest_status );
 
         // Only store minimal meta for quick access

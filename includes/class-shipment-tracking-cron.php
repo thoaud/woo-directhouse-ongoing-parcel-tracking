@@ -249,7 +249,7 @@ class ShipmentTrackingCron {
 			}
 
             // Persist to repository and minimally sync meta
-            $latest_status = ! empty( $tracking_data['events'] ) ? $api->get_latest_status( $tracking_data['events'] ) : '';
+            		$latest_status = ! empty( $tracking_data['events'] ) ? $api->get_latest_status_from_raw_data( $tracking_data ) : '';
             $repo->upsert_order_tracking( (int) $order_id, (string) $tracking_number, $tracking_data, (string) $latest_status );
 
             $order->update_meta_data( '_ongoing_tracking_updated', current_time( 'mysql' ) );
