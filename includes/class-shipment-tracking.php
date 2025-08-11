@@ -367,15 +367,20 @@ class ShipmentTracking {
 	 * @return array|WP_Error Tracking data or error
 	 */
 	public function update_order_tracking( $order_id ) {
+		// Debug logging for order processing
+		ShipmentTrackingDebug::log_order_processing( $order_id, 'start_update' );
+		
 		$order = wc_get_order( $order_id );
 		
 		if ( ! $order ) {
+			ShipmentTrackingDebug::log_order_processing( $order_id, 'order_not_found' );
 			return new \WP_Error( 'invalid_order', 'Order not found' );
 		}
 
 		$tracking_number = $order->get_meta( 'ongoing_tracking_number' );
 		
 		if ( empty( $tracking_number ) ) {
+			ShipmentTrackingDebug::log_order_processing( $order_id, 'no_tracking_number' );
 			return new \WP_Error( 'no_tracking_number', 'No tracking number found' );
 		}
 
@@ -396,8 +401,13 @@ class ShipmentTracking {
         $tracking_data = $this->api->get_tracking_data( $tracking_number );
 		
 		if ( is_wp_error( $tracking_data ) ) {
+			// Debug logging for API error
+			ShipmentTrackingDebug::log_tracking_update( $order_id, $tracking_number, [], false );
 			return $tracking_data;
 		}
+		
+		// Debug logging for successful tracking update
+		ShipmentTrackingDebug::log_tracking_update( $order_id, $tracking_number, $tracking_data, true );
 
         // Persist to dedicated table first, then sync a minimal status/meta snapshot
         $latest_status = '';
@@ -657,6 +667,14 @@ class ShipmentTracking {
 	 * @return array Array of results keyed by order ID
 	 */
     private function process_orders_parallel( $order_ids, $quiet = false ) {
+		// Debug logging for parallel processing
+		$start_time = microtime( true );
+		ShipmentTrackingDebug::log_performance( 'parallel_processing_start', $start_time, [
+			'order_count' => count( $order_ids ),
+			'quiet' => $quiet,
+		] );
+		ShipmentTrackingDebug::log_memory_usage( 'parallel_processing_start' );
+		
 		$results = [];
 		$requests = [];
 		$total_retries = 0;
@@ -884,6 +902,14 @@ class ShipmentTracking {
         
         // Defer retryable errors to the caller so they can be appended to the end of the queue
         $retryable_order_ids = array_keys( $retryable_errors );
+        
+        // Debug logging for parallel processing completion
+        ShipmentTrackingDebug::log_performance( 'parallel_processing_complete', $start_time, [
+			'successful_results' => count( $results ),
+			'retryable_errors' => count( $retryable_order_ids ),
+			'permanent_errors' => count( $permanent_errors ),
+		] );
+		ShipmentTrackingDebug::log_memory_usage( 'parallel_processing_complete' );
         
         return [
             'results' => $results,
@@ -1212,6 +1238,9 @@ class ShipmentTracking {
 	 * @param array $assoc_args Command options
 	 */
 	public function wp_cli_command( $args, $assoc_args ) {
+		// Debug logging for CLI command
+		ShipmentTrackingDebug::log_cli_command( $args[0] ?? 'help', $args, $assoc_args );
+		
 		// Show help if no command provided or help requested
 		if ( empty( $args ) || isset( $assoc_args['help'] ) ) {
 			$this->wp_cli_help();
@@ -1260,6 +1289,10 @@ class ShipmentTracking {
 				\WP_CLI::log( 'Fixing database structure...' );
 				$this->wp_cli_fix_database( $assoc_args );
 				break;
+			case 'debug-log':
+				\WP_CLI::log( 'Showing debug log...' );
+				$this->wp_cli_debug_log( $assoc_args );
+				break;
 			case 'assign-test-numbers':
 				if ( ! $is_dev_environment ) {
 					\WP_CLI::error( sprintf( 'Command "assign-test-numbers" is only available in development environments. Current environment: %s', $current_env ?: 'production' ) );
@@ -1292,6 +1325,67 @@ class ShipmentTracking {
 	}
 
 	/**
+	 * Show debug log via WP CLI
+	 */
+	private function wp_cli_debug_log( $assoc_args ) {
+		$lines = isset( $assoc_args['lines'] ) ? intval( $assoc_args['lines'] ) : 50;
+		$clear = isset( $assoc_args['clear'] );
+		$follow = isset( $assoc_args['follow'] );
+		
+		$log_file = ShipmentTrackingDebug::get_log_file_path();
+		
+		if ( ! $log_file || ! file_exists( $log_file ) ) {
+			\WP_CLI::warning( 'Debug log file does not exist. Enable debug logging in settings first.' );
+			return;
+		}
+		
+		if ( $clear ) {
+			ShipmentTrackingDebug::clear_log();
+			\WP_CLI::success( 'Debug log cleared.' );
+			return;
+		}
+		
+		$file_size = ShipmentTrackingDebug::get_log_file_size();
+		\WP_CLI::log( sprintf( 'Debug log file: %s (Size: %s)', $log_file, size_format( $file_size ) ) );
+		
+		if ( $file_size === 0 ) {
+			\WP_CLI::log( 'Debug log is empty.' );
+			return;
+		}
+		
+		// Read the last N lines
+		$content = file_get_contents( $log_file );
+		$lines_array = explode( PHP_EOL, $content );
+		$lines_array = array_filter( $lines_array ); // Remove empty lines
+		$last_lines = array_slice( $lines_array, -$lines );
+		
+		foreach ( $last_lines as $line ) {
+			\WP_CLI::log( $line );
+		}
+		
+		if ( $follow ) {
+			\WP_CLI::log( 'Following log file (press Ctrl+C to stop)...' );
+			// Simple follow implementation
+			$last_size = $file_size;
+			while ( true ) {
+				sleep( 1 );
+				clearstatcache();
+				$current_size = filesize( $log_file );
+				if ( $current_size > $last_size ) {
+					$new_content = file_get_contents( $log_file, false, null, $last_size );
+					$new_lines = explode( PHP_EOL, $new_content );
+					foreach ( $new_lines as $line ) {
+						if ( ! empty( $line ) ) {
+							\WP_CLI::log( $line );
+						}
+					}
+					$last_size = $current_size;
+				}
+			}
+		}
+	}
+
+	/**
 	 * Display help information for WP CLI command
 	 */
 	private function wp_cli_help() {
@@ -1311,6 +1405,7 @@ class ShipmentTracking {
 		\WP_CLI::log( '  schedule-unfetched  Schedule the unfetched tracking cron job' );
 		\WP_CLI::log( '  cleanup             Clean up tracking data from orders' );
 		\WP_CLI::log( '  status              Show plugin status and configuration' );
+		\WP_CLI::log( '  debug-log           Show debug log (requires debug logging enabled)' );
 		\WP_CLI::log( '  backfill            Backfill existing tracking data to repository table' );
 		\WP_CLI::log( '  fix-database        Force fix database table structure' );
 		
@@ -2420,6 +2515,9 @@ class ShipmentTracking {
 			'ongoing_shipment_tracking_last_cron_run',
 			'ongoing_shipment_tracking_last_unfetched_cron_run',
 			'ongoing_shipment_tracking_global_age_limit',
+			'ongoing_shipment_tracking_enable_emojis',
+			'ongoing_shipment_tracking_show_time_customer',
+			'ongoing_shipment_tracking_enable_debug',
 		];
 		
 		// Add status-specific options

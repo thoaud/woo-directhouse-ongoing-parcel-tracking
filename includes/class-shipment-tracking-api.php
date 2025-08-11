@@ -45,6 +45,13 @@ class ShipmentTrackingAPI {
 
 		$url = $this->api_base_url . 'fullOrderTracking/' . urlencode( $tracking_number );
 		
+		// Debug logging
+		$start_time = microtime( true );
+		ShipmentTrackingDebug::log_api_request( $url, [
+			'User-Agent' => 'WP-Ongoing-Shipment-Tracking/1.0.0 (' . get_bloginfo( 'url' ) . ')',
+			'Accept' => 'application/json',
+		], 'GET' );
+		
 		// Debug: Log the URL being called
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::log( sprintf( 'Calling API URL: %s', $url ) );
@@ -53,7 +60,7 @@ class ShipmentTrackingAPI {
 		if(defined('WP_ENV') && WP_ENV === 'local') {
 			$curl_timeout = 5;
 		}else{
-			$curl_timeout = 10;
+			$curl_timeout = 20;
 		}
 		
 		$response = wp_remote_get( $url, [
@@ -65,6 +72,9 @@ class ShipmentTrackingAPI {
 		] );
 
 		if ( is_wp_error( $response ) ) {
+			// Debug logging for error
+			ShipmentTrackingDebug::log_api_error( $url, $response->get_error_message() );
+			
 			// Debug: Log the URL being called
 			if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				\WP_CLI::log( sprintf('Retrying %s', $url ) );
@@ -80,17 +90,24 @@ class ShipmentTrackingAPI {
 			] );
 
 			if ( is_wp_error( $response ) ) {
+				// Debug logging for retry error
+				ShipmentTrackingDebug::log_api_error( $url, 'Retry failed: ' . $response->get_error_message() );
 				return new \WP_Error( 'api_request_failed', 'Failed to connect to tracking API: ' . $response->get_error_message() );
 			}
 		}
 
 		$status_code = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		$headers = wp_remote_retrieve_headers( $response );
+		$response_time = microtime( true ) - $start_time;
+		
+		// Debug logging for response
+		ShipmentTrackingDebug::log_api_response( $url, $status_code, $headers, $body, $response_time );
 		
 		if ( $status_code !== 200 ) {
 			return new \WP_Error( 'api_error', sprintf( 'API returned status code %d', $status_code ) );
 		}
 
-		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
 
 		if ( json_last_error() !== JSON_ERROR_NONE ) {

@@ -611,6 +611,13 @@ class ShipmentTrackingAdmin {
 				'default' => 'yes'
 			],
 			[
+				'name' => __( 'Enable Debug Logging', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'checkbox',
+				'desc' => __( 'Log API responses, CLI output, and debug data to a log file. Useful for troubleshooting.', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_enable_debug',
+				'default' => 'no'
+			],
+			[
 				'name' => __( 'Global Age Limit', 'directhouse-ongoing-parcel-tracking' ),
 				'type' => 'date',
 				'desc' => __( 'Cutoff date for orders to be updated. Only orders created on or after this date will be updated. This applies to all order statuses and all types of updates. Leave empty for no limit.', 'directhouse-ongoing-parcel-tracking' ),
