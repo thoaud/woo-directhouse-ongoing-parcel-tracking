@@ -162,6 +162,7 @@ class ShipmentTrackingAPI {
 			$formatted_event = [
 				'date' => $this->format_date( $event['date'] ?? '' ),
 				'description' => $this->translate_event_description( $event['eventdescription'] ?? '' ), // Apply translation here
+				'eventdescription' => $event['eventdescription'] ?? '', // Preserve original for status logic
 				'location' => $event['location'] ?? '',
 				'type' => $event['type'] ?? '',
 				'transporter_status' => $event['transporter_status'] ?? '',
@@ -378,7 +379,8 @@ class ShipmentTrackingAPI {
      * @return bool True if event indicates sent
      */
     private function is_sent_event( $event ) {
-        $description = strtolower( $event['description'] ?? '' );
+        // Use original eventdescription for status logic, not translated description
+        $description = strtolower( $event['eventdescription'] ?? $event['description'] ?? '' );
         $type = strtolower( $event['type'] ?? '' );
         // Look for phrases indicating the parcel left the warehouse en route to terminal
         $keywords = [
@@ -406,8 +408,8 @@ class ShipmentTrackingAPI {
 	 * @return bool True if event indicates waiting to be picked
 	 */
 	private function is_waiting_to_be_picked_event( $event ) {
-		// Use the description field (now contains original eventdescription)
-		$description = strtolower( $event['description'] ?? '' );
+		// Use original eventdescription for status logic, not translated description
+		$description = strtolower( $event['eventdescription'] ?? $event['description'] ?? '' );
 		
 		// Check for "waiting to be picked" keywords
 		$waiting_keywords = [
@@ -430,8 +432,8 @@ class ShipmentTrackingAPI {
 	 * @return bool True if event indicates being picked
 	 */
 	private function is_being_picked_event( $event ) {
-		// Use the description field (now contains original eventdescription)
-		$description = strtolower( $event['description'] ?? '' );
+		// Use original eventdescription for status logic, not translated description
+		$description = strtolower( $event['eventdescription'] ?? $event['description'] ?? '' );
 		
 		// Check for "being picked" keywords
 		$picking_keywords = [

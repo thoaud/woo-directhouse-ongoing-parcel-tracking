@@ -3,7 +3,7 @@
  * Plugin Name: DirectHouse Ongoing Parcel Tracking
  * Plugin URI: https://www.comfyballs.no
  * Description: Track shipments using the DirectHouse warehouse API.
- * Version: 1.0.10
+ * Version: 1.0.11
  * Text Domain: directhouse-ongoing-parcel-tracking
  * Domain Path: /languages/
  * Author: Thomas Audunhus
@@ -37,7 +37,7 @@ if ( ! in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins',
 
 define( __NAMESPACE__ . '\PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( __NAMESPACE__ . '\PLUGIN_URL', plugins_url( '', __FILE__ ) . '/' );
-define( __NAMESPACE__ . '\PLUGIN_VERSION', '1.0.10' );
+define( __NAMESPACE__ . '\PLUGIN_VERSION', '1.0.11' );
 
 // Load text domain
 add_action(

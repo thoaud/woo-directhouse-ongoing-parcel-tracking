@@ -386,7 +386,7 @@ class ShipmentTrackingAdmin {
         $latest_status = ! empty( $tracking_data['events'] ) ? $api->get_latest_status( $tracking_data['events'] ) : '';
         $repo->upsert_order_tracking( (int) $order_id, (string) $tracking_number, $tracking_data, (string) $latest_status );
 
-        $order->update_meta_data( '_ongoing_tracking_data', $tracking_data );
+        // Only store minimal meta for quick access
         $order->update_meta_data( '_ongoing_tracking_updated', current_time( 'mysql' ) );
         if ( $latest_status ) {
             $order->update_meta_data( '_ongoing_tracking_status', $latest_status );

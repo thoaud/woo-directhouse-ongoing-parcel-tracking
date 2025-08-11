@@ -391,9 +391,11 @@ class ShipmentTracking {
 		}
 
         // Mark as fetched-in-progress to avoid duplicate fetch attempts elsewhere
-        $existing_payload = $order->get_meta( '_ongoing_tracking_data' );
-        if ( $existing_payload === '' || $existing_payload === null ) {
-            $order->update_meta_data( '_ongoing_tracking_data', '{}' );
+        // Use repository table instead of meta field
+        $existing_data = $this->repository->get_tracking_by_order_id( (int) $order_id );
+        if ( $existing_data === false ) {
+            // Initialize with empty data to mark as in-progress
+            $this->repository->upsert_order_tracking( (int) $order_id, (string) $tracking_number, [], '' );
             $order->update_meta_data( '_ongoing_tracking_updated', gmdate( 'Y-m-d H:i:s' ) );
             $order->save();
         }
@@ -463,17 +465,6 @@ class ShipmentTracking {
 			if ( ! $save_result ) {
 				throw new \Exception( 'Failed to save order: save() returned false' );
 			}
-			
-            // Also persist the full payload to repository table for fast reads
-            $tracking_number = $order->get_meta( 'ongoing_tracking_number' );
-            if ( ! empty( $tracking_number ) ) {
-                ( new ShipmentTrackingRepository() )->upsert_order_tracking(
-                    (int) $order->get_id(),
-                    (string) $tracking_number,
-                    $tracking_data,
-                    (string) $current_status
-                );
-            }
 
             // Commit transaction
             $wpdb->query( 'COMMIT' );
@@ -544,17 +535,8 @@ class ShipmentTracking {
 	 * @return array|false Tracking data or false if not found
 	 */
 	public function get_tracking_data( $order_id ) {
-        // Prefer the repository table
-        $data = $this->repository->get_tracking_by_order_id( (int) $order_id );
-        if ( $data !== false ) {
-            return $data;
-        }
-        // Fallback to meta for backward compatibility
-        $order = wc_get_order( $order_id );
-        if ( ! $order ) {
-            return false;
-        }
-        return $order->get_meta( '_ongoing_tracking_data' );
+        // Use the repository table only
+        return $this->repository->get_tracking_by_order_id( (int) $order_id );
 	}
 
 	/**
