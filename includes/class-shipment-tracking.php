@@ -685,6 +685,8 @@ class ShipmentTracking {
 			$tracking_number = get_post_meta( $order_id, 'ongoing_tracking_number', true );
 			
 			if ( empty( $tracking_number ) ) {
+				// Debug logging for orders without tracking numbers
+				ShipmentTrackingDebug::log_order_processing( $order_id, 'no_tracking_number_parallel' );
 				$results[ $order_id ] = new \WP_Error( 'no_tracking_number', 'No tracking number found' );
 				continue;
 			}
@@ -703,7 +705,7 @@ class ShipmentTracking {
 			if ( defined( 'WP_ENV' ) && WP_ENV === 'local' ) {
 				$timeout = 15;
 			} else {
-				$timeout = 10;
+				$timeout = 30; // Increased from 10 to 30 seconds for production
 			}
 			
 			// Prepare the request
@@ -714,6 +716,15 @@ class ShipmentTracking {
 				'tracking_number' => $tracking_number,
 				'retry_count' => 0,
 			];
+			
+			// Debug logging for API request in parallel processing
+			ShipmentTrackingDebug::log_api_request( $url, [
+				'User-Agent' => 'WP-Ongoing-Shipment-Tracking/' . ( defined( __NAMESPACE__ . '\\PLUGIN_VERSION' ) ? constant( __NAMESPACE__ . '\\PLUGIN_VERSION' ) : '1.0.0' ) . ' (' . get_bloginfo( 'url' ) . ')',
+				'Accept' => 'application/json',
+			], 'GET', '', [
+				'order_id' => $order_id,
+				'tracking_number' => $tracking_number,
+			] );
 			
 			if ( ! $quiet ) {
 				\WP_CLI::log( sprintf( 'Preparing request for order %d (tracking: %s) - URL: %s', $order_id, $tracking_number, $url ) );
@@ -748,6 +759,11 @@ class ShipmentTracking {
 				CURLOPT_SSL_VERIFYPEER => true,
 			] );
 			
+			// Override any global cURL timeout settings for our specific requests
+			// This ensures our timeout settings take precedence over global settings
+			curl_setopt( $ch, CURLOPT_TIMEOUT, $request['timeout'] );
+			curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, $request['timeout'] );
+			
 			curl_multi_add_handle( $multi_handle, $ch );
 			$curl_handles[ $order_id ] = $ch;
 		}
@@ -775,6 +791,20 @@ class ShipmentTracking {
 			$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 			$response_body = curl_multi_getcontent( $ch );
 			$curl_error = curl_error( $ch );
+			$request_url = $requests[ $order_id ]['url'];
+			
+			// Debug logging for API response in parallel processing
+			if ( $curl_error ) {
+				ShipmentTrackingDebug::log_api_error( $request_url, 'cURL error: ' . $curl_error, [
+					'order_id' => $order_id,
+					'tracking_number' => $requests[ $order_id ]['tracking_number'],
+				] );
+			} else {
+				ShipmentTrackingDebug::log_api_response( $request_url, $http_code, [], $response_body, 0, [
+					'order_id' => $order_id,
+					'tracking_number' => $requests[ $order_id ]['tracking_number'],
+				] );
+			}
 			
 			curl_multi_remove_handle( $multi_handle, $ch );
 			curl_close( $ch );

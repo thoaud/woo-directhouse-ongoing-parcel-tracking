@@ -52,16 +52,21 @@ class ShipmentTrackingAPI {
 			'Accept' => 'application/json',
 		], 'GET' );
 		
-		// Debug: Log the URL being called
-		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			\WP_CLI::log( sprintf( 'Calling API URL: %s', $url ) );
-		}
-		
 		if(defined('WP_ENV') && WP_ENV === 'local') {
 			$curl_timeout = 5;
 		}else{
-			$curl_timeout = 20;
+			$curl_timeout = 30; // Increased from 20 to 30 seconds for production
 		}
+		
+		// Debug: Log the URL being called
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::log( sprintf( 'Calling API URL: %s (timeout: %ds)', $url, $curl_timeout ) );
+		}
+		
+		// Add a filter to override the global timeout for our specific API calls
+		add_filter( 'http_request_timeout', function( $timeout ) use ( $curl_timeout ) {
+			return $curl_timeout;
+		}, 9999 );
 		
 		$response = wp_remote_get( $url, [
 			'timeout' => $curl_timeout, 
@@ -81,6 +86,12 @@ class ShipmentTrackingAPI {
 			}
 			
 			sleep(5);
+			
+			// Ensure timeout override is applied for retry as well
+			add_filter( 'http_request_timeout', function( $timeout ) use ( $curl_timeout ) {
+				return $curl_timeout;
+			}, 9999 );
+			
 			$response = wp_remote_get( $url, [
 				'timeout' => $curl_timeout, 
 				'headers' => [

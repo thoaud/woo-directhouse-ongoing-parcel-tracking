@@ -95,8 +95,9 @@ class ShipmentTrackingDebug {
 	 * @param array $headers Request headers
 	 * @param string $method HTTP method
 	 * @param string $body Request body (if any)
+	 * @param array $additional_context Additional context data
 	 */
-	public static function log_api_request( $url, $headers = [], $method = 'GET', $body = '' ) {
+	public static function log_api_request( $url, $headers = [], $method = 'GET', $body = '', $additional_context = [] ) {
 		$context = [
 			'url' => $url,
 			'method' => $method,
@@ -105,6 +106,11 @@ class ShipmentTrackingDebug {
 
 		if ( ! empty( $body ) ) {
 			$context['body'] = $body;
+		}
+
+		// Merge additional context
+		if ( ! empty( $additional_context ) ) {
+			$context = array_merge( $context, $additional_context );
 		}
 
 		self::log( 'API Request', 'info', $context );
@@ -118,14 +124,20 @@ class ShipmentTrackingDebug {
 	 * @param array $headers Response headers
 	 * @param string $body Response body
 	 * @param float $response_time Response time in seconds
+	 * @param array $additional_context Additional context data
 	 */
-	public static function log_api_response( $url, $http_code, $headers = [], $body = '', $response_time = 0 ) {
+	public static function log_api_response( $url, $http_code, $headers = [], $body = '', $response_time = 0, $additional_context = [] ) {
 		$context = [
 			'url' => $url,
 			'http_code' => $http_code,
 			'response_time' => round( $response_time, 3 ) . 's',
 			'headers' => $headers,
 		];
+
+		// Merge additional context
+		if ( ! empty( $additional_context ) ) {
+			$context = array_merge( $context, $additional_context );
+		}
 
 		// Truncate response body if too long
 		if ( strlen( $body ) > 1000 ) {
@@ -215,11 +227,22 @@ class ShipmentTrackingDebug {
 		$memory_peak = memory_get_peak_usage( true );
 		$memory_limit = ini_get( 'memory_limit' );
 
+		// Calculate usage percentage with error handling
+		$usage_percent = 0;
+		try {
+			$limit_bytes = self::parse_memory_limit( $memory_limit );
+			if ( $limit_bytes > 0 ) {
+				$usage_percent = round( ( $memory_usage / $limit_bytes ) * 100, 2 );
+			}
+		} catch ( \Exception $e ) {
+			$usage_percent = 'error';
+		}
+
 		$context_data = [
 			'current' => self::format_bytes( $memory_usage ),
 			'peak' => self::format_bytes( $memory_peak ),
 			'limit' => $memory_limit,
-			'usage_percent' => round( ( $memory_usage / self::parse_memory_limit( $memory_limit ) ) * 100, 2 ),
+			'usage_percent' => $usage_percent,
 		];
 
 		if ( $context ) {
