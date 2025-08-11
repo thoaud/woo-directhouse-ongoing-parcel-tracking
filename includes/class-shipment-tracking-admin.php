@@ -112,7 +112,6 @@ class ShipmentTrackingAdmin {
 					'DELIVERED' => __( 'Delivered', 'directhouse-ongoing-parcel-tracking' ),
 					'AVAILABLE_FOR_DELIVERY' => __( 'Available for pickup', 'directhouse-ongoing-parcel-tracking' ),
 					'EN_ROUTE' => __( 'In transit', 'directhouse-ongoing-parcel-tracking' ),
-					'sent' => __( 'Sent', 'directhouse-ongoing-parcel-tracking' ),
 					'waiting_to_be_picked' => __( 'Waiting to be picked', 'directhouse-ongoing-parcel-tracking' ),
 					'picking' => __( 'Being picked', 'directhouse-ongoing-parcel-tracking' ),
 					'OTHER' => __( 'Other', 'directhouse-ongoing-parcel-tracking' ),
@@ -126,28 +125,9 @@ class ShipmentTrackingAdmin {
 				$formatted_date = $this->format_date_for_admin_display( $event['date'] );
 				
 				echo '<div class="tracking-event">';
-            // Optional emojis in admin
-            $emoji_enabled = get_option( 'ongoing_shipment_tracking_enable_emojis', 'no' ) === 'yes';
-            if ( $emoji_enabled ) {
-                $emoji_map = [
-                    'DELIVERED' => '✅',
-                    'AVAILABLE_FOR_DELIVERY' => '📦',
-                    'EN_ROUTE' => '🚚',
-                    'sent' => '📤',
-                    'waiting_to_be_picked' => '🧺',
-                    'picking' => '🛒',
-                    'OTHER' => 'ℹ️',
-                    'unknown' => '❔',
-                ];
-                $emoji = $emoji_map[ $status ] ?? '';
-                if ( $emoji ) {
-                    $status_text = $emoji . ' ' . $status_text;
-                }
-            }
-
-            echo '<div class="event-header">';
-            echo '<strong>' . esc_html( $formatted_date ) . '</strong>';
-            echo '<span class="event-status ' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
+				echo '<div class="event-header">';
+				echo '<strong>' . esc_html( $formatted_date ) . '</strong>';
+				echo '<span class="event-status ' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
 				echo '</div>';
                 echo '<div class="event-description">' . esc_html( $this->translate_event_description( $event['description'] ) ) . '</div>';
 				if ( ! empty( $event['location'] ) ) {
@@ -252,14 +232,13 @@ class ShipmentTrackingAdmin {
 			$shipping_method_info['shipping_method']
 		);
 
-        if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
+		if ( $tracking_data && ! empty( $tracking_data['events'] ) ) {
 			$latest_status = $api->get_latest_status( $tracking_data['events'] );
 			
 			$status_labels = [
 				'DELIVERED' => __( 'Delivered', 'directhouse-ongoing-parcel-tracking' ),
 				'AVAILABLE_FOR_DELIVERY' => __( 'Available for pickup', 'directhouse-ongoing-parcel-tracking' ),
 				'EN_ROUTE' => __( 'In transit', 'directhouse-ongoing-parcel-tracking' ),
-                'sent' => __( 'Sent', 'directhouse-ongoing-parcel-tracking' ),
 				'waiting_to_be_picked' => __( 'Waiting to be picked', 'directhouse-ongoing-parcel-tracking' ),
 				'picking' => __( 'Being picked', 'directhouse-ongoing-parcel-tracking' ),
 				'OTHER' => __( 'Other', 'directhouse-ongoing-parcel-tracking' ),
@@ -267,26 +246,7 @@ class ShipmentTrackingAdmin {
 			];
 
 			$status_class = 'tracking-status ' . strtolower( $latest_status );
-            $status_text = $status_labels[ $latest_status ] ?? $status_labels['unknown'];
-
-            // Optional emojis in admin orders list table
-            $emoji_enabled = get_option( 'ongoing_shipment_tracking_enable_emojis', 'no' ) === 'yes';
-            if ( $emoji_enabled ) {
-                $emoji_map = [
-                    'DELIVERED' => '✅',
-                    'AVAILABLE_FOR_DELIVERY' => '📦',
-                    'EN_ROUTE' => '🚚',
-                    'sent' => '📤',
-                    'waiting_to_be_picked' => '🧺',
-                    'picking' => '🛒',
-                    'OTHER' => 'ℹ️',
-                    'unknown' => '❔',
-                ];
-                $emoji = $emoji_map[ $latest_status ] ?? '';
-                if ( $emoji ) {
-                    $status_text = $emoji . ' ' . $status_text;
-                }
-            }
+			$status_text = $status_labels[ $latest_status ] ?? $status_labels['unknown'];
 			
 			echo '<div class="tracking-column-content">';
 			echo '<span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
@@ -404,16 +364,6 @@ class ShipmentTrackingAdmin {
 	 * @param WC_Order $order The order object.
 	 */
 	public function add_tracking_link_to_order_data( $order ) {
-        // Prevent duplicate output in cases where the action fires multiple times
-        static $printed_for_orders = [];
-        if ( $order && method_exists( $order, 'get_id' ) ) {
-            $order_id = (int) $order->get_id();
-            if ( in_array( $order_id, $printed_for_orders, true ) ) {
-                return;
-            }
-            $printed_for_orders[] = $order_id;
-        }
-
 		$tracking_number = $order->get_meta( 'ongoing_tracking_number' );
 		
 		if ( empty( $tracking_number ) ) {
@@ -569,13 +519,6 @@ class ShipmentTrackingAdmin {
 				'id'   => 'ongoing_shipment_tracking_enable_column',
 				'default' => 'yes'
 			],
-            [
-                'name' => __( 'Enable Status Emojis', 'directhouse-ongoing-parcel-tracking' ),
-                'type' => 'checkbox',
-                'desc' => __( 'Show emojis next to statuses in admin and customer views.', 'directhouse-ongoing-parcel-tracking' ),
-                'id'   => 'ongoing_shipment_tracking_enable_emojis',
-                'default' => 'no'
-            ],
 			[
 				'name' => __( 'Max Updates Per Run', 'directhouse-ongoing-parcel-tracking' ),
 				'type' => 'number',
@@ -586,6 +529,39 @@ class ShipmentTrackingAdmin {
 					'min' => '0',
 					'step' => '1',
 				],
+			],
+			[
+				'name' => __( 'Enable Parallel Processing', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'checkbox',
+				'desc' => __( 'Use parallel processing for faster updates in cron jobs', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_enable_parallel',
+				'default' => 'no'
+			],
+			[
+				'name' => __( 'Enable Fast Queries', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'checkbox',
+				'desc' => __( 'Use optimized SQL queries for large datasets in cron jobs', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_enable_fast_query',
+				'default' => 'no'
+			],
+			[
+				'name' => __( 'Parallel Batch Size', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'number',
+				'desc' => __( 'Initial batch size for parallel processing. Will be adjusted dynamically based on performance.', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_parallel_batch_size',
+				'default' => '10',
+				'custom_attributes' => [
+					'min' => '3',
+					'max' => '50',
+					'step' => '1',
+				],
+			],
+			[
+				'name' => __( 'Enable Status Emojis', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'checkbox',
+				'desc' => __( 'Show emojis next to tracking statuses in admin and frontend displays', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_enable_emojis',
+				'default' => 'no'
 			],
 			[
 				'name' => __( 'Order Status Settings', 'directhouse-ongoing-parcel-tracking' ),

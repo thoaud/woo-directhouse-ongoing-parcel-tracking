@@ -683,9 +683,9 @@ class ShipmentTracking {
 			
 			// Set timeout based on environment - use same logic as API class
 			if ( defined( 'WP_ENV' ) && WP_ENV === 'local' ) {
-				$timeout = 10;
+				$timeout = 15;
 			} else {
-				$timeout = 5;
+				$timeout = 10;
 			}
 			
 			// Prepare the request

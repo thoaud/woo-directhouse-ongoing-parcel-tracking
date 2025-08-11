@@ -93,145 +93,54 @@ class ShipmentTrackingCron {
 	 * Update tracking for relevant orders
 	 */
 	public function update_tracking_for_processing_orders() {
-		// Check if cron updates are enabled
-		$enable_cron = get_option( 'ongoing_shipment_tracking_enable_cron', 'yes' );
-		if ( $enable_cron !== 'yes' ) {
-			return;
-		}
-
-		// Get configured order statuses from individual settings
-		$order_statuses = wc_get_order_statuses();
-		$enabled_statuses = [];
+		// Add debug logging
+		error_log( 'Ongoing Shipment Tracking - Cron started: update_tracking_for_processing_orders' );
 		
-		foreach ( $order_statuses as $status_key => $status_label ) {
-			$enabled = get_option( 'ongoing_shipment_tracking_status_' . $status_key, 'no' );
-			if ( $enabled === 'yes' ) {
-				$enabled_statuses[] = str_replace( 'wc-', '', $status_key );
-			}
+		// Use the unified method from the main class
+		$tracking = new ShipmentTracking();
+		error_log( 'Ongoing Shipment Tracking - Created tracking object' );
+		
+		$result = $tracking->unified_update_tracking( [
+			'quiet' => true, // Cron should be quiet
+			'force' => false, // Don't force if cron is disabled
+		] );
+		
+		error_log( 'Ongoing Shipment Tracking - unified_update_tracking completed. Result: ' . print_r( $result, true ) );
+		
+		// Log results for cron
+		if ( $result['updated'] > 0 || ! empty( $result['errors'] ) ) {
+			error_log( sprintf( 
+				'Ongoing Shipment Tracking - Cron update completed: %d updated, %d errors', 
+				$result['updated'], 
+				count( $result['errors'] )
+			) );
 		}
 		
-		// If no statuses are enabled, use defaults
-		if ( empty( $enabled_statuses ) ) {
-			$enabled_statuses = [ 'processing', 'completed' ];
-		}
-
-		// Build meta query
-		$meta_query = [
-			'relation' => 'AND',
-			[
-				'key' => 'ongoing_tracking_number',
-				'compare' => 'EXISTS',
-			],
-			[
-				'key' => 'ongoing_tracking_number',
-				'value' => '',
-				'compare' => '!=',
-			],
-			[
-				'key' => 'ongoing_tracking_number',
-				'value' => null,
-				'compare' => '!=',
-			],
-		];
-
-		// Check if we should exclude delivered orders
-		$exclude_delivered = get_option( 'ongoing_shipment_tracking_exclude_delivered', 'yes' ) === 'yes';
-		if ( $exclude_delivered ) {
-			$meta_query[] = [
-				'relation' => 'OR',
-				[
-					'key' => '_ongoing_tracking_status',
-					'compare' => 'NOT EXISTS',
-				],
-				[
-					'key' => '_ongoing_tracking_status',
-					'value' => 'DELIVERED',
-					'compare' => '!=',
-				],
-			];
-		}
-
-		// Get orders with tracking numbers and specified statuses
-        // Get orders with tracking numbers and specified statuses
-        $orders = wc_get_orders( [
-            'status' => $enabled_statuses,
-            'limit'  => -1,
-            'return' => 'ids',
-            'meta_query' => $meta_query,
-        ] );
-
-		if ( empty( $orders ) ) {
-			return;
-		}
-
-		$updated = 0;
-		$errors = [];
-		$api = new ShipmentTrackingAPI();
-
-		foreach ( $orders as $order_id ) {
-			$order = wc_get_order( $order_id );
-			
-			if ( ! $order ) {
-				continue;
-			}
-
-			$tracking_number = $order->get_meta( 'ongoing_tracking_number' );
-			$current_status = $order->get_meta( '_ongoing_tracking_status' );
-			
-			// Double-check we have a tracking number and status is not delivered
-			if ( empty( $tracking_number ) || $current_status === 'DELIVERED' ) {
-				continue;
-			}
-
-			// Get tracking data from API
-            $tracking_data = $api->get_tracking_data( $tracking_number );
-			
-			if ( is_wp_error( $tracking_data ) ) {
-				$errors[] = sprintf( 'Order %d: %s', $order_id, $tracking_data->get_error_message() );
-				continue;
-			}
-
-            // Persist to repository and minimally sync meta
-            $latest_status = ! empty( $tracking_data['events'] ) ? $api->get_latest_status( $tracking_data['events'] ) : '';
-            ( new ShipmentTrackingRepository() )->upsert_order_tracking( (int) $order_id, (string) $tracking_number, $tracking_data, (string) $latest_status );
-
-            $order->update_meta_data( '_ongoing_tracking_updated', current_time( 'mysql' ) );
-            if ( $latest_status ) {
-                $order->update_meta_data( '_ongoing_tracking_status', $latest_status );
-            }
-            $order->save();
-
-			$updated++;
-
-			// Check if order is delivered and update status if needed
-			if ( $api->is_delivered( $tracking_data['events'] ) ) {
-				$order->update_status( 'completed', __( 'Order delivered according to tracking information.', 'directhouse-ongoing-parcel-tracking' ) );
-			}
-
-			// Add a small delay to avoid overwhelming the API
-			usleep( 100000 ); // 0.1 second delay
-		}
-
-		// Log results
-		if ( $updated > 0 ) {
-			error_log( sprintf( 'Ongoing Shipment Tracking - Updated tracking for %d orders', $updated ) );
-		}
-
-		if ( ! empty( $errors ) ) {
-			error_log( 'Ongoing Shipment Tracking - Errors during cron update: ' . implode( ', ', $errors ) );
-		}
-
 		// Store last run time
-		update_option( 'ongoing_shipment_tracking_last_cron_run', current_time( 'mysql' ) );
+		$last_run_time = current_time( 'mysql' );
+		error_log( 'Ongoing Shipment Tracking - About to update last run time to: ' . $last_run_time );
+		
+		$update_result = update_option( 'ongoing_shipment_tracking_last_cron_run', $last_run_time );
+		error_log( 'Ongoing Shipment Tracking - update_option result: ' . ( $update_result ? 'true' : 'false' ) );
+		
+		// Verify the update
+		$stored_time = get_option( 'ongoing_shipment_tracking_last_cron_run', 'never' );
+		error_log( 'Ongoing Shipment Tracking - Stored time after update: ' . $stored_time );
+		
+		error_log( 'Ongoing Shipment Tracking - Cron completed: update_tracking_for_processing_orders' );
 	}
 
 	/**
 	 * Update unfetched tracking for orders that have tracking numbers but haven't been fetched yet
 	 */
 	public function update_unfetched_tracking() {
+		// Add debug logging
+		error_log( 'Ongoing Shipment Tracking - Unfetched cron started: update_unfetched_tracking' );
+		
 		// Check if cron updates are enabled
 		$enable_cron = get_option( 'ongoing_shipment_tracking_enable_cron', 'yes' );
 		if ( $enable_cron !== 'yes' ) {
+			error_log( 'Ongoing Shipment Tracking - Unfetched cron disabled, returning early' );
 			return;
 		}
 
@@ -250,6 +159,8 @@ class ShipmentTrackingCron {
 		if ( empty( $enabled_statuses ) ) {
 			$enabled_statuses = [ 'processing', 'completed' ];
 		}
+
+		error_log( 'Ongoing Shipment Tracking - Unfetched cron enabled statuses: ' . implode( ', ', $enabled_statuses ) );
 
 		// Build meta query for unfetched orders (have tracking number but no tracking data)
 		$meta_query = [
@@ -298,7 +209,10 @@ class ShipmentTrackingCron {
         $repo = new ShipmentTrackingRepository();
         $orders = $repo->get_unfetched_orders( $enabled_statuses, $max_updates, $exclude_delivered );
 
+		error_log( 'Ongoing Shipment Tracking - Unfetched cron found ' . count( $orders ) . ' unfetched orders' );
+
 		if ( empty( $orders ) ) {
+			error_log( 'Ongoing Shipment Tracking - Unfetched cron no orders to process, returning' );
 			return;
 		}
 
@@ -360,6 +274,7 @@ class ShipmentTrackingCron {
 
 		// Store last unfetched run time
 		update_option( 'ongoing_shipment_tracking_last_unfetched_cron_run', current_time( 'mysql' ) );
+		error_log( 'Ongoing Shipment Tracking - Unfetched cron completed: update_unfetched_tracking' );
 	}
 
 	/**
@@ -404,6 +319,63 @@ class ShipmentTrackingCron {
 	}
 
 	/**
+	 * Calculate the highest frequency interval from order status settings
+	 *
+	 * @return string The highest frequency interval
+	 */
+	public function get_highest_frequency_interval() {
+		$order_statuses = wc_get_order_statuses();
+		$intervals = [];
+		
+		foreach ( $order_statuses as $status_key => $status_label ) {
+			$enabled = get_option( 'ongoing_shipment_tracking_status_' . $status_key, 'no' );
+			if ( $enabled === 'yes' ) {
+				$interval = get_option( 'ongoing_shipment_tracking_interval_' . $status_key, 'default' );
+				if ( $interval !== 'default' ) {
+					$intervals[] = $interval;
+				}
+			}
+		}
+		
+		// If no custom intervals are set, return the default global interval
+		if ( empty( $intervals ) ) {
+			$global_interval = get_option( 'ongoing_shipment_tracking_cron_interval', 'hourly' );
+			// If global interval is also 'on_demand', fall back to 'hourly'
+			return $global_interval === 'on_demand' ? 'hourly' : $global_interval;
+		}
+		
+		// Define interval priorities (lower number = higher frequency)
+		$interval_priorities = [
+			'every_15_minutes' => 1,
+			'every_30_minutes' => 2,
+			'every_45_minutes' => 3,
+			'hourly' => 4,
+			'every_2_hours' => 5,
+			'every_3_hours' => 6,
+			'every_4_hours' => 7,
+			'every_6_hours' => 8,
+			'every_8_hours' => 9,
+			'every_12_hours' => 10,
+			'twicedaily' => 11,
+			'daily' => 12,
+			'weekly' => 13,
+		];
+		
+		// Find the interval with the highest priority (lowest number)
+		$highest_priority = 999;
+		$highest_frequency_interval = 'hourly'; // fallback
+		
+		foreach ( $intervals as $interval ) {
+			if ( isset( $interval_priorities[ $interval ] ) && $interval_priorities[ $interval ] < $highest_priority ) {
+				$highest_priority = $interval_priorities[ $interval ];
+				$highest_frequency_interval = $interval;
+			}
+		}
+		
+		return $highest_frequency_interval;
+	}
+
+	/**
 	 * Reschedule the cron jobs
 	 */
 	public function reschedule() {
@@ -418,7 +390,12 @@ class ShipmentTrackingCron {
 		}
 		
 		// Get configured interval
-		$interval = get_option( 'ongoing_shipment_tracking_cron_interval', 'hourly' );
+		$interval = get_option( 'ongoing_shipment_tracking_cron_interval', 'on_demand' );
+		
+		// Handle "on demand" setting
+		if ( $interval === 'on_demand' ) {
+			$interval = $this->get_highest_frequency_interval();
+		}
 		
 		// Schedule main tracking job
 		if ( ! wp_next_scheduled( 'ongoing_shipment_tracking_cron' ) ) {

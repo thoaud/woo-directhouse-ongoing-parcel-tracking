@@ -53,7 +53,7 @@ class ShipmentTrackingAPI {
 		if(defined('WP_ENV') && WP_ENV === 'local') {
 			$curl_timeout = 5;
 		}else{
-			$curl_timeout = 3;
+			$curl_timeout = 10;
 		}
 		
 		$response = wp_remote_get( $url, [
