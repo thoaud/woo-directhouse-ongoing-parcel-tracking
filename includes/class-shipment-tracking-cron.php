@@ -36,6 +36,16 @@ class ShipmentTrackingCron {
 	 * @return array Modified schedules
 	 */
 	public function add_cron_interval( $schedules ) {
+		$schedules['every_minute'] = [
+			'interval' => 60, // 1 minute
+			'display'  => __( 'Every Minute', 'directhouse-ongoing-parcel-tracking' ),
+		];
+		
+		$schedules['every_10_minutes'] = [
+			'interval' => 600, // 10 minutes
+			'display'  => __( 'Every 10 Minutes', 'directhouse-ongoing-parcel-tracking' ),
+		];
+		
 		$schedules['every_15_minutes'] = [
 			'interval' => 900, // 15 minutes
 			'display'  => __( 'Every 15 Minutes', 'directhouse-ongoing-parcel-tracking' ),
@@ -178,11 +188,7 @@ class ShipmentTrackingCron {
 				'key' => 'ongoing_tracking_number',
 				'value' => null,
 				'compare' => '!=',
-			],
-			[
-				'key' => '_ongoing_tracking_data',
-				'compare' => 'NOT EXISTS',
-			],
+			]
 		];
 
 		// Check if we should exclude delivered orders
@@ -346,19 +352,21 @@ class ShipmentTrackingCron {
 		
 		// Define interval priorities (lower number = higher frequency)
 		$interval_priorities = [
-			'every_15_minutes' => 1,
-			'every_30_minutes' => 2,
-			'every_45_minutes' => 3,
-			'hourly' => 4,
-			'every_2_hours' => 5,
-			'every_3_hours' => 6,
-			'every_4_hours' => 7,
-			'every_6_hours' => 8,
-			'every_8_hours' => 9,
-			'every_12_hours' => 10,
-			'twicedaily' => 11,
-			'daily' => 12,
-			'weekly' => 13,
+			'every_minute' => 0,
+			'every_10_minutes' => 1,
+			'every_15_minutes' => 2,
+			'every_30_minutes' => 3,
+			'every_45_minutes' => 4,
+			'hourly' => 5,
+			'every_2_hours' => 6,
+			'every_3_hours' => 7,
+			'every_4_hours' => 8,
+			'every_6_hours' => 9,
+			'every_8_hours' => 10,
+			'every_12_hours' => 11,
+			'twicedaily' => 12,
+			'daily' => 13,
+			'weekly' => 14,
 		];
 		
 		// Find the interval with the highest priority (lowest number)

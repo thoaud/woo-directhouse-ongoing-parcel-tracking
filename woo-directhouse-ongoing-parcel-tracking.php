@@ -3,7 +3,7 @@
  * Plugin Name: DirectHouse Ongoing Parcel Tracking
  * Plugin URI: https://www.comfyballs.no
  * Description: Track shipments using the DirectHouse warehouse API.
- * Version: 1.0.6
+ * Version: 1.0.7
  * Text Domain: directhouse-ongoing-parcel-tracking
  * Domain Path: /languages/
  * Author: Thomas Audunhus
@@ -37,7 +37,7 @@ if ( ! in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins',
 
 define( __NAMESPACE__ . '\PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( __NAMESPACE__ . '\PLUGIN_URL', plugins_url( '', __FILE__ ) . '/' );
-define( __NAMESPACE__ . '\PLUGIN_VERSION', '1.0.0' );
+define( __NAMESPACE__ . '\PLUGIN_VERSION', '1.0.7' );
 
 // Load text domain
 add_action(
@@ -64,6 +64,20 @@ require_once $__ongoing_base_path . 'includes/class-shipment-tracking-repository
 add_action( 'plugins_loaded', __NAMESPACE__ . '\\init' );
 
 function init() {
+	// Check if plugin version has changed and force database updates if needed
+	$current_version = get_option( 'ongoing_shipment_tracking_version', '0.0.0' );
+	$plugin_version = constant( __NAMESPACE__ . '\\PLUGIN_VERSION' );
+	if ( version_compare( $current_version, $plugin_version, '<' ) ) {
+		// Version has changed, force database structure update
+		\Ongoing\ShipmentTracking\ShipmentTrackingRepository::force_ensure_table_structure();
+		
+		// Update stored version
+		update_option( 'ongoing_shipment_tracking_version', $plugin_version );
+	}
+	
+	// Always ensure database table structure is correct
+	\Ongoing\ShipmentTracking\ShipmentTrackingRepository::force_ensure_table_structure();
+	
 	new ShipmentTracking();
 }
 

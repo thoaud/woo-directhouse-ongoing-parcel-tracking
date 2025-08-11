@@ -25,7 +25,7 @@ class ShipmentTrackingRepository {
     /**
      * Current DB schema version
      */
-    private const DB_VERSION = '1.0.0';
+    private const DB_VERSION = '1.0.1';
 
     /**
      * Get table name with current blog prefix
@@ -76,6 +76,78 @@ class ShipmentTrackingRepository {
         $current = get_option( self::DB_VERSION_OPTION );
         if ( $current !== self::DB_VERSION ) {
             self::create_table_for_blog();
+        }
+    }
+
+    /**
+     * Force ensure the table structure is correct (called during plugin init)
+     */
+    public static function force_ensure_table_structure(): void {
+        global $wpdb;
+        
+        // Check if table exists
+        $table = self::table_name();
+        $table_exists = $wpdb->get_var( $wpdb->prepare( 
+            "SHOW TABLES LIKE %s", 
+            $table 
+        ) );
+        
+        if ( ! $table_exists ) {
+            // Table doesn't exist, create it
+            self::create_table_for_blog();
+            return;
+        }
+        
+        // Table exists, check if it has the correct structure
+        $current_version = get_option( self::DB_VERSION_OPTION );
+        if ( $current_version !== self::DB_VERSION ) {
+            // Version mismatch, recreate table
+            self::create_table_for_blog();
+            return;
+        }
+        
+        // Additional safety check: verify key columns exist
+        $columns = $wpdb->get_results( "DESCRIBE {$table}" );
+        $required_columns = [
+            'id' => 'BIGINT UNSIGNED',
+            'site_id' => 'BIGINT UNSIGNED',
+            'order_id' => 'BIGINT UNSIGNED',
+            'tracking_number' => 'VARCHAR(190)',
+            'data_json' => 'LONGTEXT',
+            'latest_status' => 'VARCHAR(64)',
+            'last_updated' => 'DATETIME',
+            'created_at' => 'DATETIME',
+            'updated_at' => 'DATETIME'
+        ];
+        
+        $existing_columns = [];
+        foreach ( $columns as $column ) {
+            $existing_columns[ $column->Field ] = $column->Type;
+        }
+        
+        $missing_columns = array_diff_key( $required_columns, $existing_columns );
+        
+        if ( ! empty( $missing_columns ) ) {
+            // Missing required columns, recreate table
+            self::create_table_for_blog();
+            return;
+        }
+        
+        // Check for required indexes
+        $indexes = $wpdb->get_results( "SHOW INDEX FROM {$table}" );
+        $required_indexes = [ 'order_id_unique', 'latest_status_idx', 'tracking_number_idx' ];
+        $existing_indexes = [];
+        
+        foreach ( $indexes as $index ) {
+            $existing_indexes[] = $index->Key_name;
+        }
+        
+        $missing_indexes = array_diff( $required_indexes, $existing_indexes );
+        
+        if ( ! empty( $missing_indexes ) ) {
+            // Missing required indexes, recreate table
+            self::create_table_for_blog();
+            return;
         }
     }
 

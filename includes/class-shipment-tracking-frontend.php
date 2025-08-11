@@ -386,8 +386,15 @@ class ShipmentTrackingFrontend {
 			$wp_timezone = wp_timezone();
 			$date->setTimezone( $wp_timezone );
 			
-			// Format using WordPress date and time format settings
-			return $date->format( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) );
+			// Check if we should show time in customer views
+			$show_time = get_option( 'ongoing_shipment_tracking_show_time_customer', 'yes' ) === 'yes';
+			
+			// Format using WordPress date format, optionally with time
+			if ( $show_time ) {
+				return $date->format( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) );
+			} else {
+				return $date->format( get_option( 'date_format' ) );
+			}
 		} catch ( \Exception $e ) {
 			return $date_string;
 		}

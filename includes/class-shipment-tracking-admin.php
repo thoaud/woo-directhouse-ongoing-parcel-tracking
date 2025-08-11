@@ -121,6 +121,25 @@ class ShipmentTrackingAdmin {
 				$status_text = $status_labels[ $status ] ?? $status;
 				$status_class = 'admin-status-' . strtolower( $status );
 				
+				// Add emojis for admin display if enabled
+				$emoji_enabled = get_option( 'ongoing_shipment_tracking_enable_emojis', 'no' ) === 'yes';
+				if ( $emoji_enabled ) {
+					$emoji_map = [
+						'DELIVERED' => '✅',
+						'AVAILABLE_FOR_DELIVERY' => '📦',
+						'EN_ROUTE' => '🚚',
+						'sent' => '📤',
+						'waiting_to_be_picked' => '🧺',
+						'picking' => '🛒',
+						'OTHER' => 'ℹ️',
+						'unknown' => '❔',
+					];
+					$emoji = $emoji_map[ $status ] ?? '';
+					if ( $emoji ) {
+						$status_text = $emoji . ' ' . $status_text;
+					}
+				}
+				
 				// Format date for admin display
 				$formatted_date = $this->format_date_for_admin_display( $event['date'] );
 				
@@ -247,6 +266,25 @@ class ShipmentTrackingAdmin {
 
 			$status_class = 'tracking-status ' . strtolower( $latest_status );
 			$status_text = $status_labels[ $latest_status ] ?? $status_labels['unknown'];
+			
+			// Add emojis for admin column display if enabled
+			$emoji_enabled = get_option( 'ongoing_shipment_tracking_enable_emojis', 'no' ) === 'yes';
+			if ( $emoji_enabled ) {
+				$emoji_map = [
+					'DELIVERED' => '✅',
+					'AVAILABLE_FOR_DELIVERY' => '📦',
+					'EN_ROUTE' => '🚚',
+					'sent' => '📤',
+					'waiting_to_be_picked' => '🧺',
+					'picking' => '🛒',
+					'OTHER' => 'ℹ️',
+					'unknown' => '❔',
+				];
+				$emoji = $emoji_map[ $latest_status ] ?? '';
+				if ( $emoji ) {
+					$status_text = $emoji . ' ' . $status_text;
+				}
+			}
 			
 			echo '<div class="tracking-column-content">';
 			echo '<span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</span>';
@@ -489,6 +527,8 @@ class ShipmentTrackingAdmin {
 				'desc' => __( 'How often to update tracking information', 'directhouse-ongoing-parcel-tracking' ),
 				'id'   => 'ongoing_shipment_tracking_cron_interval',
 				'options' => [
+					'every_minute' => __( 'Every Minute', 'directhouse-ongoing-parcel-tracking' ),
+					'every_10_minutes' => __( 'Every 10 Minutes', 'directhouse-ongoing-parcel-tracking' ),
 					'every_15_minutes' => __( 'Every 15 Minutes', 'directhouse-ongoing-parcel-tracking' ),
 					'every_30_minutes' => __( 'Every 30 Minutes', 'directhouse-ongoing-parcel-tracking' ),
 					'every_45_minutes' => __( 'Every 45 Minutes', 'directhouse-ongoing-parcel-tracking' ),
@@ -562,6 +602,20 @@ class ShipmentTrackingAdmin {
 				'desc' => __( 'Show emojis next to tracking statuses in admin and frontend displays', 'directhouse-ongoing-parcel-tracking' ),
 				'id'   => 'ongoing_shipment_tracking_enable_emojis',
 				'default' => 'no'
+			],
+			[
+				'name' => __( 'Show Time in Customer Views', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'checkbox',
+				'desc' => __( 'Show time along with date in customer tracking displays. Uncheck to show only the date.', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_show_time_customer',
+				'default' => 'yes'
+			],
+			[
+				'name' => __( 'Global Age Limit', 'directhouse-ongoing-parcel-tracking' ),
+				'type' => 'date',
+				'desc' => __( 'Cutoff date for orders to be updated. Only orders created on or after this date will be updated. This applies to all order statuses and all types of updates. Leave empty for no limit.', 'directhouse-ongoing-parcel-tracking' ),
+				'id'   => 'ongoing_shipment_tracking_global_age_limit',
+				'default' => '',
 			],
 			[
 				'name' => __( 'Order Status Settings', 'directhouse-ongoing-parcel-tracking' ),

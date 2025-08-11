@@ -88,7 +88,7 @@ class ShipmentTracking {
 		// WP CLI command
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			// Determine available commands based on environment
-            $available_commands = [ 'update', 'update-unfetched', 'schedule-unfetched', 'cleanup', 'backfill', 'status', 'help' ];
+            		$available_commands = [ 'update', 'update-unfetched', 'schedule-unfetched', 'cleanup', 'backfill', 'status', 'fix-database', 'help' ];
 			
 			// Only include assign-test-numbers in development environments
 			$dev_environments = [ 'local', 'dev', 'development', 'test', 'staging', 'debug' ];
@@ -277,7 +277,7 @@ class ShipmentTracking {
 				'type' => 'shop_order',
 				'paged'  => $page,
 				'orderby' => 'ID',
-				'order' => 'ASC',
+				'order' => 'DESC',
 			] );
 
 			if(is_multisite()){
@@ -698,7 +698,7 @@ class ShipmentTracking {
 			];
 			
 			if ( ! $quiet ) {
-				\WP_CLI::log( sprintf( 'Preparing request for order %d (tracking: %s)', $order_id, $tracking_number ) );
+				\WP_CLI::log( sprintf( 'Preparing request for order %d (tracking: %s) - URL: %s', $order_id, $tracking_number, $url ) );
 			}
 		}
 		
@@ -722,7 +722,7 @@ class ShipmentTracking {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_TIMEOUT => $request['timeout'],
 				CURLOPT_CONNECTTIMEOUT => $request['timeout'],
-				CURLOPT_USERAGENT => 'WP-Ongoing-Shipment-Tracking/1.0.0 (' . get_bloginfo( 'url' ) . ')',
+				CURLOPT_USERAGENT => 'WP-Ongoing-Shipment-Tracking/' . ( defined( __NAMESPACE__ . '\\PLUGIN_VERSION' ) ? constant( __NAMESPACE__ . '\\PLUGIN_VERSION' ) : '1.0.0' ) . ' (' . get_bloginfo( 'url' ) . ')',
 				CURLOPT_HTTPHEADER => [
 					'Accept: application/json',
 				],
@@ -1142,17 +1142,36 @@ class ShipmentTracking {
 			];
 		}
 
+		// Check global age limit first
+		$global_age_limit = get_option( 'ongoing_shipment_tracking_global_age_limit', '' );
+		
 		// Build date query for age limits
 		$date_query = [];
 		$has_age_limits = false;
-		foreach ( $status_settings as $status => $settings ) {
-			if ( $settings['age_limit'] > 0 ) {
-				$has_age_limits = true;
-				$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
-				$date_query[] = [
-					'after' => $cutoff_date,
-					'inclusive' => true,
-				];
+		
+		// Apply global age limit if set
+		if ( ! empty( $global_age_limit ) ) {
+			$has_age_limits = true;
+			$cutoff_date = $global_age_limit . ' 00:00:00';
+			$date_query[] = [
+				'after' => $cutoff_date,
+				'inclusive' => true,
+			];
+			
+			if ( ! $quiet ) {
+				\WP_CLI::log( sprintf( 'Global age limit applied: cutoff date %s', $cutoff_date ) );
+			}
+		} else {
+			// Apply individual status age limits only if no global limit
+			foreach ( $status_settings as $status => $settings ) {
+				if ( $settings['age_limit'] > 0 ) {
+					$has_age_limits = true;
+					$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
+					$date_query[] = [
+						'after' => $cutoff_date,
+						'inclusive' => true,
+					];
+				}
 			}
 		}
 
@@ -1163,7 +1182,7 @@ class ShipmentTracking {
 			'type' => 'shop_order',
 			'return' => 'ids',
 			'orderby' => 'ID',
-			'order' => 'ASC',
+			'order' => 'DESC', // Newest orders first
 			'meta_query' => $meta_query,
 			'no_found_rows' => true, // Don't count total rows for performance
 			'update_post_meta_cache' => false, // Don't cache meta for performance
@@ -1237,6 +1256,10 @@ class ShipmentTracking {
 				\WP_CLI::log( 'Checking plugin status...' );
 				$this->wp_cli_status( $assoc_args );
 				break;
+			case 'fix-database':
+				\WP_CLI::log( 'Fixing database structure...' );
+				$this->wp_cli_fix_database( $assoc_args );
+				break;
 			case 'assign-test-numbers':
 				if ( ! $is_dev_environment ) {
 					\WP_CLI::error( sprintf( 'Command "assign-test-numbers" is only available in development environments. Current environment: %s', $current_env ?: 'production' ) );
@@ -1247,6 +1270,24 @@ class ShipmentTracking {
 				break;
 			default:
 				\WP_CLI::error( sprintf( 'Unknown command: %s. Use "update", "update-unfetched", "schedule-unfetched", "cleanup", "status", "backfill", or "assign-test-numbers" (in dev environments).', $command ) );
+		}
+	}
+
+	/**
+	 * Fix database structure via WP CLI
+	 */
+	private function wp_cli_fix_database( $assoc_args ) {
+		$quiet = isset( $assoc_args['quiet'] );
+		
+		if ( ! $quiet ) {
+			\WP_CLI::log( 'Checking database table structure...' );
+		}
+		
+		// Force ensure table structure
+		\Ongoing\ShipmentTracking\ShipmentTrackingRepository::force_ensure_table_structure();
+		
+		if ( ! $quiet ) {
+			\WP_CLI::success( 'Database table structure has been verified and fixed if necessary.' );
 		}
 	}
 
@@ -1271,6 +1312,7 @@ class ShipmentTracking {
 		\WP_CLI::log( '  cleanup             Clean up tracking data from orders' );
 		\WP_CLI::log( '  status              Show plugin status and configuration' );
 		\WP_CLI::log( '  backfill            Backfill existing tracking data to repository table' );
+		\WP_CLI::log( '  fix-database        Force fix database table structure' );
 		
 		if ( $is_dev_environment ) {
 			\WP_CLI::log( '  assign-test-numbers Assign test tracking numbers to orders' );
@@ -1287,7 +1329,13 @@ class ShipmentTracking {
         \WP_CLI::log( '  --dry-run           Do not write changes (for backfill/cleanup); just show what would happen' );
         \WP_CLI::log( '  --fetch-missing     When backfilling, fetch from API if no tracking payload is stored in meta' );
         \WP_CLI::log( '  --force             Overwrite existing tracking rows in table during backfill' );
-        \WP_CLI::log( '  --fast-query        Use optimized SQL queries for large datasets' );
+        		\WP_CLI::log( '  --fast-query        Use optimized SQL queries for large datasets' );
+		\WP_CLI::log( '' );
+		\WP_CLI::log( 'AGE LIMITS:' );
+		\WP_CLI::log( '  Orders are filtered by age limits configured in WooCommerce settings.' );
+		\WP_CLI::log( '  Global age limit (if set) overrides individual status age limits.' );
+		\WP_CLI::log( '  Global age limit uses a specific date (YYYY-MM-DD format).' );
+		\WP_CLI::log( '  Use "wp directhouse-tracking status" to see current age limit settings.' );
 		
 		if ( $is_dev_environment ) {
 			\WP_CLI::log( '  --file=<path>       File path containing tracking numbers (for assign-test-numbers)' );
@@ -1857,6 +1905,7 @@ class ShipmentTracking {
 		$enable_cron = get_option( 'ongoing_shipment_tracking_enable_cron', 'no' );
 		$cron_interval = get_option( 'ongoing_shipment_tracking_cron_interval', 'hourly' );
 		$exclude_delivered = get_option( 'ongoing_shipment_tracking_exclude_delivered', 'yes' );
+		$global_age_limit = get_option( 'ongoing_shipment_tracking_global_age_limit', '' );
 		
 		$order_statuses = wc_get_order_statuses();
 		$enabled_statuses = [];
@@ -1872,6 +1921,7 @@ class ShipmentTracking {
 		\WP_CLI::log( '  Cron Enabled: ' . ( $enable_cron === 'yes' ? 'Yes' : 'No' ) );
 		\WP_CLI::log( '  Cron Interval: ' . $cron_interval );
 		\WP_CLI::log( '  Exclude Delivered: ' . ( $exclude_delivered === 'yes' ? 'Yes' : 'No' ) );
+		\WP_CLI::log( '  Global Age Limit: ' . ( ! empty( $global_age_limit ) ? $global_age_limit : 'No limit' ) );
 		\WP_CLI::log( '  Enabled Statuses: ' . implode( ', ', $enabled_statuses ) );
 		
 		// Check next scheduled cron
@@ -2082,16 +2132,31 @@ class ShipmentTracking {
 		}
 		$status_where = implode( ' OR ', $status_conditions );
 
+		// Check global age limit first
+		$global_age_limit = get_option( 'ongoing_shipment_tracking_global_age_limit', '' );
+		
 		// Build age limit conditions
 		$age_conditions = [];
-		foreach ( $status_settings as $status => $settings ) {
-			if ( $settings['age_limit'] > 0 ) {
-				$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
-				$age_conditions[] = $wpdb->prepare( 
-					'(p.post_status = %s AND p.post_date >= %s)', 
-					'wc-' . $status, 
-					$cutoff_date 
-				);
+		
+		// Apply global age limit if set
+		if ( ! empty( $global_age_limit ) ) {
+			$cutoff_date = $global_age_limit . ' 00:00:00';
+			$age_conditions[] = $wpdb->prepare( 'p.post_date >= %s', $cutoff_date );
+			
+			if ( ! $quiet ) {
+				\WP_CLI::log( sprintf( 'Global age limit applied: cutoff date %s', $cutoff_date ) );
+			}
+		} else {
+			// Apply individual status age limits only if no global limit
+			foreach ( $status_settings as $status => $settings ) {
+				if ( $settings['age_limit'] > 0 ) {
+					$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
+					$age_conditions[] = $wpdb->prepare( 
+						'(p.post_status = %s AND p.post_date >= %s)', 
+						'wc-' . $status, 
+						$cutoff_date 
+					);
+				}
 			}
 		}
 
@@ -2124,7 +2189,7 @@ class ShipmentTracking {
 			$sql .= " AND (pm_status.meta_value IS NULL OR pm_status.meta_value != 'DELIVERED')";
 		}
 
-		$sql .= " ORDER BY p.ID ASC LIMIT %d";
+		$sql .= " ORDER BY p.ID DESC LIMIT %d";
 
 		$sql = $wpdb->prepare( $sql, $max_updates );
 
@@ -2170,16 +2235,31 @@ class ShipmentTracking {
 		}
 		$status_where = implode( ' OR ', $status_conditions );
 
+		// Check global age limit first
+		$global_age_limit = get_option( 'ongoing_shipment_tracking_global_age_limit', '' );
+		
 		// Build age limit conditions
 		$age_conditions = [];
-		foreach ( $status_settings as $status => $settings ) {
-			if ( $settings['age_limit'] > 0 ) {
-				$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
-				$age_conditions[] = $wpdb->prepare( 
-					'(p.post_status = %s AND p.post_date >= %s)', 
-					'wc-' . $status, 
-					$cutoff_date 
-				);
+		
+		// Apply global age limit if set
+		if ( ! empty( $global_age_limit ) ) {
+			$cutoff_date = $global_age_limit . ' 00:00:00';
+			$age_conditions[] = $wpdb->prepare( 'p.post_date >= %s', $cutoff_date );
+			
+			if ( ! $quiet ) {
+				\WP_CLI::log( sprintf( 'Global age limit applied: cutoff date %s', $cutoff_date ) );
+			}
+		} else {
+			// Apply individual status age limits only if no global limit
+			foreach ( $status_settings as $status => $settings ) {
+				if ( $settings['age_limit'] > 0 ) {
+					$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $settings['age_limit'] * DAY_IN_SECONDS ) );
+					$age_conditions[] = $wpdb->prepare( 
+						'(p.post_status = %s AND p.post_date >= %s)', 
+						'wc-' . $status, 
+						$cutoff_date 
+					);
+				}
 			}
 		}
 
@@ -2190,8 +2270,7 @@ class ShipmentTracking {
 			INNER JOIN {$wpdb->postmeta} pm_tracking ON p.ID = pm_tracking.post_id 
 				AND pm_tracking.meta_key = 'ongoing_tracking_number' 
 				AND pm_tracking.meta_value != ''
-			LEFT JOIN {$wpdb->postmeta} pm_data ON p.ID = pm_data.post_id 
-				AND pm_data.meta_key = '_ongoing_tracking_data'
+			LEFT JOIN {$wpdb->prefix}dh_ongoing_tracking_data t ON t.order_id = p.ID
 		";
 
 		// Add exclude delivered condition
@@ -2210,15 +2289,15 @@ class ShipmentTracking {
 		}
 
         // Add condition to only get orders that haven't been fetched yet
-        // Treat empty string as unfetched; '{}' (in-progress marker) should be considered fetched-in-progress and excluded
-        $sql .= " AND (pm_data.meta_value IS NULL OR pm_data.meta_value = '')";
+        // Orders without data in the custom table are considered unfetched
+        $sql .= " AND t.order_id IS NULL";
 
 		// Add exclude delivered condition
 		if ( $exclude_delivered ) {
 			$sql .= " AND (pm_status.meta_value IS NULL OR pm_status.meta_value != 'DELIVERED')";
 		}
 
-		$sql .= " ORDER BY p.ID ASC LIMIT %d";
+		$sql .= " ORDER BY p.ID DESC LIMIT %d";
 
 		$sql = $wpdb->prepare( $sql, $max_updates );
 
@@ -2242,20 +2321,22 @@ class ShipmentTracking {
 	private function cleanup_tracking_data_batch( $limit = 50, $quiet = false ) {
 		global $wpdb;
 		
-		// Get orders that have tracking data
+		// Get orders that have tracking data in the new table structure
 		$sql = $wpdb->prepare( "
-			SELECT DISTINCT p.ID 
-			FROM {$wpdb->posts} p
-			INNER JOIN {$wpdb->postmeta} pm_data ON p.ID = pm_data.post_id 
-				AND pm_data.meta_key = '_ongoing_tracking_data'
+			SELECT DISTINCT t.order_id 
+			FROM {$wpdb->prefix}dh_ongoing_tracking_data t
+			INNER JOIN {$wpdb->posts} p ON t.order_id = p.ID
 			WHERE p.post_type = 'shop_order'
-			ORDER BY p.ID ASC 
+			ORDER BY t.order_id DESC 
 			LIMIT %d
 		", $limit );
 		
 		$order_ids = $wpdb->get_col( $sql );
 		
 		if ( empty( $order_ids ) ) {
+			if ( ! $quiet ) {
+				\WP_CLI::log( 'No tracking data found in database table.' );
+			}
 			return 0;
 		}
 		
@@ -2287,27 +2368,43 @@ class ShipmentTracking {
 			\WP_CLI::log( 'Removing all tracking data from database...' );
 		}
 		
-		// Delete all tracking-related meta data in batches
+		// Delete all tracking data from the new table structure
+		$deleted = $wpdb->delete(
+			$wpdb->prefix . 'dh_ongoing_tracking_data',
+			[],
+			[]
+		);
+		
+		if ( $deleted !== false ) {
+			if ( ! $quiet ) {
+				\WP_CLI::log( sprintf( 'Deleted %d tracking data records from database table', $deleted ) );
+			}
+		} else {
+			if ( ! $quiet ) {
+				\WP_CLI::warning( 'Failed to delete tracking data from database table' );
+			}
+		}
+		
+		// Also clean up any legacy meta data that might still exist
 		$meta_keys = [
 			'_ongoing_tracking_data',
 			'_ongoing_tracking_status', 
 			'_ongoing_tracking_updated',
-			'ongoing_tracking_number'
 		];
 		
-		$total_deleted = 0;
+		$total_meta_deleted = 0;
 		
 		foreach ( $meta_keys as $meta_key ) {
-			$deleted = $wpdb->delete(
+			$meta_deleted = $wpdb->delete(
 				$wpdb->postmeta,
 				[ 'meta_key' => $meta_key ],
 				[ '%s' ]
 			);
 			
-			if ( $deleted !== false ) {
-				$total_deleted += $deleted;
-				if ( ! $quiet ) {
-					\WP_CLI::log( sprintf( 'Deleted %d records with meta key: %s', $deleted, $meta_key ) );
+			if ( $meta_deleted !== false ) {
+				$total_meta_deleted += $meta_deleted;
+				if ( ! $quiet && $meta_deleted > 0 ) {
+					\WP_CLI::log( sprintf( 'Deleted %d legacy meta records with key: %s', $meta_deleted, $meta_key ) );
 				}
 			}
 		}
@@ -2322,12 +2419,15 @@ class ShipmentTracking {
 			'ongoing_shipment_tracking_exclude_delivered',
 			'ongoing_shipment_tracking_last_cron_run',
 			'ongoing_shipment_tracking_last_unfetched_cron_run',
+			'ongoing_shipment_tracking_global_age_limit',
 		];
 		
 		// Add status-specific options
 		$order_statuses = wc_get_order_statuses();
 		foreach ( $order_statuses as $status_key => $status_label ) {
 			$options_to_delete[] = 'ongoing_shipment_tracking_status_' . $status_key;
+			$options_to_delete[] = 'ongoing_shipment_tracking_age_' . $status_key;
+			$options_to_delete[] = 'ongoing_shipment_tracking_interval_' . $status_key;
 		}
 		
 		foreach ( $options_to_delete as $option ) {
@@ -2335,10 +2435,10 @@ class ShipmentTracking {
 		}
 		
 		if ( ! $quiet ) {
-			\WP_CLI::log( sprintf( 'Total tracking data records deleted: %d', $total_deleted ) );
+			\WP_CLI::log( sprintf( 'Total records deleted: %d tracking data + %d legacy meta', $deleted, $total_meta_deleted ) );
 		}
 		
-		return $total_deleted;
+		return $deleted + $total_meta_deleted;
 	}
 
 	/**
@@ -2348,13 +2448,22 @@ class ShipmentTracking {
 	 * @return bool Success status
 	 */
 	private function cleanup_order_tracking_data( $order_id ) {
+		global $wpdb;
+		
 		$order = wc_get_order( $order_id );
 		
 		if ( ! $order ) {
 			return false;
 		}
 		
-		// Remove tracking-related meta data
+		// Remove tracking data from the new database table
+		$deleted = $wpdb->delete(
+			$wpdb->prefix . 'dh_ongoing_tracking_data',
+			[ 'order_id' => $order_id ],
+			[ '%d' ]
+		);
+		
+		// Also remove any legacy meta data that might still exist
 		$order->delete_meta_data( '_ongoing_tracking_data' );
 		$order->delete_meta_data( '_ongoing_tracking_status' );
 		$order->delete_meta_data( '_ongoing_tracking_updated' );
@@ -2364,7 +2473,7 @@ class ShipmentTracking {
 		
 		$order->save();
 		
-		return true;
+		return $deleted !== false;
 	}
 
 	/**
@@ -2376,6 +2485,10 @@ class ShipmentTracking {
 		// Clear scheduled cron jobs
 		wp_clear_scheduled_hook( 'ongoing_shipment_tracking_cron' );
 		wp_clear_scheduled_hook( 'ongoing_shipment_tracking_unfetched_cron' );
+		
+		// Drop the tracking data table
+		$table_name = $wpdb->prefix . 'dh_ongoing_tracking_data';
+		$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" );
 		
 		// Delete all tracking-related meta data
 		$meta_keys = [
@@ -2403,12 +2516,15 @@ class ShipmentTracking {
 			'ongoing_shipment_tracking_exclude_delivered',
 			'ongoing_shipment_tracking_last_cron_run',
 			'ongoing_shipment_tracking_last_unfetched_cron_run',
+			'ongoing_shipment_tracking_global_age_limit',
 		];
 		
 		// Add status-specific options
 		$order_statuses = wc_get_order_statuses();
 		foreach ( $order_statuses as $status_key => $status_label ) {
 			$options_to_delete[] = 'ongoing_shipment_tracking_status_' . $status_key;
+			$options_to_delete[] = 'ongoing_shipment_tracking_age_' . $status_key;
+			$options_to_delete[] = 'ongoing_shipment_tracking_interval_' . $status_key;
 		}
 		
 		foreach ( $options_to_delete as $option ) {
